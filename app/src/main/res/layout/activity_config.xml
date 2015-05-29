@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:clock="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/header_height"
+        android:id="@+id/header_view"
+        android:background="@color/PrimaryDark"
+        android:elevation="8dp">
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/preview1"
+            android:elevation="2dp">
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/background1"
+                android:cropToPadding="false"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/preview_description"/>
+            <net.nurik.roman.formwatchface.common.FormClockView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/clock_view_1"
+                clock:textSize="@dimen/preview_text_size"/>
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/preview2"
+            android:elevation="4dp"
+            android:visibility="invisible">
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/background2"
+                android:cropToPadding="false"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/preview_description"/>
+            <net.nurik.roman.formwatchface.common.FormClockView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/clock_view_2"
+                clock:textSize="@dimen/preview_text_size"/>
+        </RelativeLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/Overlay"
+            android:id="@+id/header_overlay"
+            android:elevation="24dp"
+            android:clickable="true"/>
+    </RelativeLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/header_view"
+        android:id="@+id/fragment_container"/>
+</RelativeLayout>

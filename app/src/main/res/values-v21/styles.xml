@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:colorPrimary">@color/Primary</item>
+        <item name="android:colorPrimaryDark">@color/PrimaryDark</item>
+        <item name="android:colorAccent">@color/Accent</item>
+        <item name="android:textColorPrimary">@color/TextPrimary</item>
+        <item name="android:textColorSecondary">@color/TextSecondary</item>
+        <item name="android:statusBarColor">@color/PrimaryDark</item>
+        <item name="android:colorControlNormal">@color/Primary</item>
+        <item name="android:colorControlActivated">@color/PrimaryDark</item>
+        <item name="android:colorControlHighlight">@color/PrimaryLight</item>
+    </style>
+</resources>

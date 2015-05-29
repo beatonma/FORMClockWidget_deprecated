@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="FormClockView">
+        <attr name="textSize" format="dimension" />
+        <attr name="charSpacing" format="dimension" />
+        <attr name="color1" format="color" />
+        <attr name="color2" format="color" />
+        <attr name="color3" format="color" />
+    </declare-styleable>
+	
+	<declare-styleable name="ColorPicker">
+        <attr name="mode" format="string"/>
+        <attr name="show_preview" format="boolean"/>
+        <attr name="default_swatch" format="integer"/>
+        <attr name="default_color" format="integer"/>
+    </declare-styleable>
+</resources>

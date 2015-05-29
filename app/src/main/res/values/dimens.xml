@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="header_height">192dp</dimen>
+    <dimen name="preview_text_size">64sp</dimen>
+</resources>

@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">FORM Clock Widget</string>
+
+    <string name="preview_description">Widget preview</string>
+
+    <!-- User settings -->
+    <string name="pref_use_wallpaper_palette">Use wallpaper palette</string>
+    <string name="pref_use_wallpaper_palette_summary">Automatically pick colors from your current wallpaper.</string>
+
+    <string name="pref_colors_category">Colors</string>
+    <string name="pref_color1">Color 1</string>
+    <string name="pref_color2">Color 2</string>
+    <string name="pref_color3">Color 3</string>
+</resources>

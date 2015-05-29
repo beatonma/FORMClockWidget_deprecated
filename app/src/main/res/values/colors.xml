@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="White">#ffffff</color>
+    <color name="Black">#000000</color>
+
+    <color name="Primary">#424242</color>
+    <color name="PrimaryDark">#212121</color>
+    <color name="PrimaryLight">#848484</color>
+    <color name="Accent">#FF1744</color>
+    <color name="AccentDark">#D50000</color>
+    <color name="AccentLight">#FF5252</color>
+
+    <color name="TextPrimary">#D8000000</color>
+    <color name="TextSecondary">#89000000</color>
+
+    <color name="Dialog">#eeeeee</color>
+    <color name="Overlay">#33aaaaaa</color>
+    <color name="OverlayAccent">#33FF1744</color>
+</resources>
