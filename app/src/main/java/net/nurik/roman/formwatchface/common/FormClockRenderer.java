@@ -16,6 +16,7 @@
 
 package net.nurik.roman.formwatchface.common;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -23,6 +24,9 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.RectF;
+import android.util.Log;
+
+import com.beatonma.formclockwidget.Utils;
 
 import java.util.Calendar;
 import java.util.HashMap;
@@ -67,6 +71,10 @@ public class FormClockRenderer {
 	private long mMillisToNext;
 
 	private PointF mMeasuredSize = new PointF();
+
+	public FormClockRenderer(Options options) {
+		this.mOptions = options;
+	}
 
 	public FormClockRenderer(Options options, ClockPaints paints) {
 		this.mOptions = options;
@@ -218,6 +226,22 @@ public class FormClockRenderer {
 			x += Math.floor(glyphWidth +
 					(i >= 0 ? mOptions.charSpacing : 0));
 		}
+	}
+
+	/**
+	 * Added by Michael Beaton 2015/06/01
+	 * Finds the largest text size that can render 00:00 in a given width.
+	 */
+	public int getMaxTextSize(Context context, int layoutWidth) {
+		float colonWidth = mFont.getGlyph(":").getWidthAtProgress(0);
+		float zeroWidth = mFont.getGlyph("0").getWidthAtProgress(0);
+		float totalWidth = (zeroWidth * 4)
+				+ colonWidth
+				+ Utils.dpToPx(context, (int) (mOptions.charSpacing * 6));
+
+		int textSize = (int) (Font.DRAWHEIGHT * layoutWidth / totalWidth);
+
+		return textSize;
 	}
 
 	public void draw(final Canvas canvas, float left, float top, final boolean offscreenGlyphs) {

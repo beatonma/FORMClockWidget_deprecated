@@ -12,12 +12,14 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.os.Bundle;
 import android.support.v7.graphics.Palette;
 import android.util.Log;
 import android.widget.RemoteViews;
 
 import com.beatonma.colorpicker.ColorUtils;
 
+import net.nurik.roman.formwatchface.common.FormClockRenderer;
 import net.nurik.roman.formwatchface.common.FormClockView;
 
 import java.util.Calendar;
@@ -29,13 +31,16 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 	private final static String TAG = "WidgetProvider";
 	final static String UPDATE = "com.beatonma.formclockwidget.UPDATE";
 	final static String ANIMATE = "com.beatonma.formclockwidget.ANIMATE";
+	final static String FINISHED = "com.beatonma.formclockwidget.FINISHED";
 	final static long UPDATE_INTERVAL = 60000l;
 
-	private final static int WIDTH = 1000;
-	private final static int HEIGHT = 500;
+	int widgetWidth = 1000;
+	int widgetHeight = 333;
 
 	public final static int ANIMATION_START_SECOND = 58;
 	public final static int ANIMATION_STOP_SECOND = 1;
+
+	int textSize = 226;
 
 	Context context;
 	SharedPreferences preferences;
@@ -56,6 +61,21 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 		updateWidgets(appWidgetManager, appWidgetIds);
 	}
 
+	@Override
+	public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
+		super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
+
+		widgetWidth = Utils.dpToPx(context, newOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH));
+		widgetHeight = widgetWidth / 2;
+
+		textSize = widgetHeight;
+
+		FormClockRenderer.Options options = new FormClockRenderer.Options();
+		FormClockRenderer renderer = new FormClockRenderer(options);
+
+		textSize = renderer.getMaxTextSize(context, widgetWidth);
+	}
+
 	public void updateWidgets(AppWidgetManager appWidgetManager, int[] appWidgetIds) {
 		for (int appWidgetId : appWidgetIds) {
 			updateWidget(context, appWidgetManager, appWidgetId);
@@ -72,6 +92,7 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 	public void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
 		if (clockView == null) {
 			loadSharedPreferences();
+			initClockViews();
 		}
 
 		Bitmap bitmap = clockView.getDrawingCache();
@@ -87,7 +108,14 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 		super.onReceive(context, intent);
 		this.context = context;
 
+		loadSharedPreferences();
+
 		switch (intent.getAction()) {
+			case AppWidgetManager.ACTION_APPWIDGET_UPDATE:
+				animationService = new Intent(context, WidgetAnimationService.class);
+				context.startService(animationService);
+				break;
+
 			case UPDATE:
 				animationService = new Intent(context, WidgetAnimationService.class);
 				context.startService(animationService);
@@ -95,9 +123,11 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 
 			case ANIMATE:
 				updateWidgets();
-				if (enableAnimation) {
-					scheduleUpdate();
-				}
+				break;
+
+			case FINISHED:
+				Log.d(TAG, "Update finished - scheduling next update");
+				scheduleUpdate();
 				break;
 		}
 	}
@@ -148,6 +178,7 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 	@Override
 	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
 		loadSharedPreferences();
+		initClockViews();
 	}
 
 	public void loadSharedPreferences() {
@@ -158,17 +189,18 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 			color1 = ColorUtils.getColorFromPreference(preferences, "pref_color1", Color.WHITE);
 			color2 = ColorUtils.getColorFromPreference(preferences, "pref_color2", Color.GRAY);
 			color3 = ColorUtils.getColorFromPreference(preferences, "pref_color3", Color.BLACK);
-
-			if (useWallpaperPalette) {
-				initClockView(context);
-			}
-			else {
-				initClockView(context, color1, color2, color3);
-			}
 		}
 		else {
 			Log.d(TAG, "Loading prefs failed: context is null");
-			//initClockView(context);
+		}
+	}
+
+	public void initClockViews() {
+		if (useWallpaperPalette) {
+			initClockView(context);
+		}
+		else {
+			initClockView(context, color1, color2, color3);
 		}
 	}
 
@@ -178,6 +210,7 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 		AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
 		if (enableAnimation) {
+			Log.d(TAG, "Scheduling next animated update");
 			time.set(Calendar.SECOND, ANIMATION_START_SECOND);
 			time.set(Calendar.MILLISECOND, 0);
 
@@ -185,24 +218,22 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 				alarmManager.setExact(AlarmManager.RTC, time.getTime().getTime(), getUpdateIntent(context));
 			}
 			else {
-				alarmManager.setRepeating(AlarmManager.RTC, time.getTime().getTime(), UPDATE_INTERVAL, getUpdateIntent(context));
+				alarmManager.set(AlarmManager.RTC, time.getTime().getTime(), getUpdateIntent(context));
 			}
 		}
-		else {
-			time.set(Calendar.SECOND, 2); // make sure animation has finished before updating widget
-			time.set(Calendar.MILLISECOND, 0);
-
-			alarmManager.setRepeating(AlarmManager.RTC, time.getTime().getTime(), UPDATE_INTERVAL, getUpdateIntent(context));
+		else { // No scheduling necessary - just start the service
+			animationService = new Intent(context, WidgetAnimationService.class);
+			context.startService(animationService);
 		}
 	}
 
 	private void initClockView(Context context) {
 		clockView = new FormClockView(context);
-		clockView.setTextSize((int) context.getResources().getDimension(R.dimen.preview_text_size));
+		clockView.setTextSize(textSize);
 		clockView.setColors(Color.WHITE, Color.GRAY, Color.BLACK);
 		clockView.setDrawingCacheEnabled(true);
-		clockView.measure(WIDTH, HEIGHT);
-		clockView.layout(0, 0, WIDTH, HEIGHT);
+		clockView.measure(widgetWidth, widgetHeight);
+		clockView.layout(0, 0, widgetWidth, widgetHeight);
 
 		if (useWallpaperPalette) {
 			setClockColorsToWallpaper(context);
@@ -211,11 +242,11 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 
 	private void initClockView(Context context, int color1, int color2, int color3) {
 		clockView = new FormClockView(context);
-		clockView.setTextSize((int) context.getResources().getDimension(R.dimen.preview_text_size));
+		clockView.setTextSize(textSize);
 		clockView.setColors(color1, color2, color3);
 		clockView.setDrawingCacheEnabled(true);
-		clockView.measure(WIDTH, HEIGHT);
-		clockView.layout(0, 0, WIDTH, HEIGHT);
+		clockView.measure(widgetWidth, widgetHeight);
+		clockView.layout(0, 0, widgetWidth, widgetHeight);
 	}
 
 	private void setClockColorsToWallpaper(final Context context) {

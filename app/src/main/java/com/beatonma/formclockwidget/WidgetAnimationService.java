@@ -1,7 +1,10 @@
 package com.beatonma.formclockwidget;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.IBinder;
@@ -21,8 +24,28 @@ public class WidgetAnimationService extends Service {
 	private final static String TAG = "AnimationService";
 	private final static int FRAME_DELAY = 33; // ~30fps
 	private boolean enableAnimation = false;
+	private static final IntentFilter timeIntentFilter;
+
+	static {
+		timeIntentFilter = new IntentFilter();
+		timeIntentFilter.addAction(Intent.ACTION_TIME_TICK);
+		timeIntentFilter.addAction(Intent.ACTION_TIMEZONE_CHANGED);
+		timeIntentFilter.addAction(Intent.ACTION_TIME_CHANGED);
+	}
 
 	public WidgetAnimationService() {
+	}
+
+	@Override
+	public void onCreate() {
+		super.onCreate();
+		registerReceiver(timeChangedReceiver, timeIntentFilter);
+	}
+
+	@Override
+	public void onDestroy() {
+		super.onDestroy();
+		unregisterReceiver(timeChangedReceiver);
 	}
 
 	Handler handler = new Handler();
@@ -35,6 +58,11 @@ public class WidgetAnimationService extends Service {
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+		doUpdate();
+		return START_STICKY;
+	}
+
+	public void doUpdate() {
 		SharedPreferences sp = getBaseContext().getSharedPreferences(ConfigActivity.PREFS, MODE_PRIVATE);
 		enableAnimation = sp.getBoolean("pref_enable_animation", false);
 
@@ -45,18 +73,13 @@ public class WidgetAnimationService extends Service {
 		else {
 			widgetUpdate();
 		}
-
-		return super.onStartCommand(intent, flags, startId);
 	}
 
 	// Single update call, no animation
 	public void widgetUpdate() {
-		Log.d(TAG, "Non-animated update initiated.");
-		Intent intent = new Intent(this, WidgetProvider.class);
-		intent.setAction(WidgetProvider.ANIMATE);
-		sendBroadcast(intent);
-
-		stop();
+		Intent updateIntent = new Intent(this, WidgetProvider.class);
+		updateIntent.setAction(WidgetProvider.ANIMATE);
+		sendBroadcast(updateIntent);
 	}
 
 	// Repeated update calls while 58 < [second] < 1
@@ -72,12 +95,18 @@ public class WidgetAnimationService extends Service {
 			handler.postDelayed(animationRunnable, FRAME_DELAY);
 		}
 		else {
+			finishWidgetAnimation();
 			stop();
 		}
 	}
 
+	public void finishWidgetAnimation() {
+		Intent intent = new Intent(this, WidgetProvider.class);
+		intent.setAction(WidgetProvider.FINISHED);
+		sendBroadcast(intent);
+	}
+
 	public void stop() {
-		Log.d(TAG, "Stopping update service.");
 		handler.removeCallbacks(animationRunnable);
 		stopSelf();
 	}
@@ -86,4 +115,11 @@ public class WidgetAnimationService extends Service {
 	public IBinder onBind(Intent intent) {
 		return null;
 	}
+
+	private final BroadcastReceiver timeChangedReceiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			doUpdate();
+		}
+	};
 }
