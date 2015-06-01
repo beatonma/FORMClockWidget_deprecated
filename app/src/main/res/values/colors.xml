@@ -14,6 +14,27 @@
     <color name="TextSecondary">#89000000</color>
 
     <color name="Dialog">#eeeeee</color>
-    <color name="Overlay">#33aaaaaa</color>
+    <color name="Overlay">#11aaaaaa</color>
     <color name="OverlayAccent">#33FF1744</color>
+
+    <color name="Red500">#f44336</color>
+    <color name="Pink500">#e01e63</color>
+    <color name="Purple500">#9c27b0</color>
+    <color name="DeepPurple500">#673ab7</color>
+    <color name="Indigo500">#3f51b5</color>
+    <color name="Blue500">#2196f3</color>
+    <color name="LightBlue500">#03a9f4</color>
+    <color name="Cyan500">#00bcd4</color>
+    <color name="Teal500">#009688</color>
+    <color name="Green500">#4caf50</color>
+    <color name="LightGreen500">#8bc34a</color>
+    <color name="Lime500">#cddc39</color>
+    <color name="Yellow500">#ffeb3b</color>
+    <color name="Amber500">#ffc107</color>
+    <color name="Orange500">#ff9800</color>
+    <color name="DeepOrange500">#ff5722</color>
+    <color name="Brown500">#795548</color>
+    <color name="Grey500">#9e9e9e</color>
+    <color name="BlueGrey500">#607d8b</color>
+
 </resources>

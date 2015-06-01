@@ -6,6 +6,8 @@
     <!-- User settings -->
     <string name="pref_use_wallpaper_palette">Use wallpaper palette</string>
     <string name="pref_use_wallpaper_palette_summary">Automatically pick colors from your current wallpaper.</string>
+    <string name="pref_enable_animation">Enable animation</string>
+    <string name="pref_enable_animation_summary">Warning: widgets are really not meant to animate. Enabling animation may cause performance issues, including increased battery consumption!</string>
 
     <string name="pref_colors_category">Colors</string>
     <string name="pref_color1">Color 1</string>

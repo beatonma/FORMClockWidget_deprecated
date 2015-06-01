@@ -177,7 +177,7 @@ public class FormClockRenderer {
 			}
 		}
 
-		// reverse animted glyph indices
+		// reverse animated glyph indices
 		for (int i = 0; i < mAnimatedGlyphIndexCount; i++) {
 			mAnimatedGlyphIndices[i] = mTempAnimatedGlyphIndices[mAnimatedGlyphIndexCount - i - 1];
 		}

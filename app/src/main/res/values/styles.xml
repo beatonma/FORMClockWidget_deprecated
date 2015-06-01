@@ -6,4 +6,40 @@
         <item name="android:textColorPrimary">@color/TextPrimary</item>
         <item name="android:textColorSecondary">@color/TextSecondary</item>
     </style>
+
+    <style name="Red" parent="AppTheme">
+        <item name="colorControlActivated">@color/Red500</item>
+    </style>
+
+    <style name="Pink" parent="AppTheme">
+        <item name="colorControlActivated">@color/Pink500</item>
+    </style>
+
+    <style name="DeepPurple" parent="AppTheme">
+        <item name="colorControlActivated">@color/DeepPurple500</item>
+    </style>
+
+    <style name="Blue" parent="AppTheme">
+        <item name="colorControlActivated">@color/Blue500</item>
+    </style>
+
+    <style name="Green" parent="AppTheme">
+        <item name="colorControlActivated">@color/Green500</item>
+    </style>
+
+    <style name="Amber" parent="AppTheme">
+        <item name="colorControlActivated">@color/Amber500</item>
+    </style>
+
+    <style name="DeepOrange" parent="AppTheme">
+        <item name="colorControlActivated">@color/DeepOrange500</item>
+    </style>
+
+    <style name="Brown" parent="AppTheme">
+        <item name="colorControlActivated">@color/Brown500</item>
+    </style>
+
+    <style name="Grey" parent="AppTheme">
+        <item name="colorControlActivated">@color/Grey500</item>
+    </style>
 </resources>

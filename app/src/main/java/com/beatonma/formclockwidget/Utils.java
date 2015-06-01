@@ -17,6 +17,7 @@ import android.graphics.drawable.StateListDrawable;
 import android.os.Build;
 import android.support.v7.graphics.Palette;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.view.animation.AccelerateDecelerateInterpolator;
@@ -25,10 +26,20 @@ import android.view.animation.AccelerateDecelerateInterpolator;
  * Created by Michael on 28/05/2015.
  */
 public class Utils {
+	private final static String TAG = "Utils";
+
 	public final static int CIRCULAR_LEFT = 0;
 	public final static int CIRCULAR_TOP = 1;
 	public final static int CIRCULAR_RIGHT = 2;
 	public final static int CIRCULAR_BOTTOM = 3;
+
+	public static boolean isKitkat() {
+		return Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT;
+	}
+
+	public static boolean isLollipop() {
+		return Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
+	}
 
 	public static Palette getWallpaperPalette(Context context) {
 		Bitmap bitmap = getWallpaperBitmap(context);
@@ -95,8 +106,9 @@ public class Utils {
 		float[] hsv = new float[3];
 
 		Color.colorToHSV(color, hsv);
-		hsv[1] += hsv[1] < 0.5f ? -0.1f : 0.1f;
-		hsv[2] += hsv[2] < 0.5f ? -0.2f : 0.2f;
+		hsv[0] = (hsv[0] + 50) % 360; // hue
+		hsv[1] += hsv[1] < 0.5f ? 0.2f : -0.2f; // saturation
+		hsv[2] += hsv[2] < 0.5f ? 0.3f : -0.3f; // value/brightness
 
 		setBackground(v, color, Color.HSVToColor(hsv));
 	}
@@ -109,17 +121,23 @@ public class Utils {
 	}
 
 	public static void createCircularReveal(View v, int cx, int cy) {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-			// get the final radius for the clipping circle
-			int finalRadius = Math.max(v.getWidth(), v.getHeight());
+		try {
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+				// get the final radius for the clipping circle
+				int finalRadius = Math.max(v.getWidth(), v.getHeight());
 
-			// create the animator for this view (the start radius is zero)
-			Animator anim = ViewAnimationUtils.createCircularReveal(v, cx, cy, 0, finalRadius);
-			anim.setInterpolator(new AccelerateDecelerateInterpolator());
+				// create the animator for this view (the start radius is zero)
+				Animator anim = ViewAnimationUtils.createCircularReveal(v, cx, cy, 0, finalRadius);
+				anim.setInterpolator(new AccelerateDecelerateInterpolator());
 
-			// make the view visible and start the animation
+				// make the view visible and start the animation
+				v.setVisibility(View.VISIBLE);
+				anim.start();
+			}
+		}
+		catch (Exception e) {
+			Log.e(TAG, "Error creating circular reveal: " + e.toString());
 			v.setVisibility(View.VISIBLE);
-			anim.start();
 		}
 	}
 
@@ -167,25 +185,31 @@ public class Utils {
 	}
 
 	public static void createCircularHide(final View v, int cx, int cy) {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-			// get the initial radius for the clipping circle
-			int initialRadius = v.getWidth();
+		try {
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+				// get the initial radius for the clipping circle
+				int initialRadius = v.getWidth();
 
-			// create the animation (the final radius is zero)
-			Animator anim = ViewAnimationUtils.createCircularReveal(v, cx, cy, initialRadius, 0);
-			anim.setInterpolator(new AccelerateDecelerateInterpolator());
+				// create the animation (the final radius is zero)
+				Animator anim = ViewAnimationUtils.createCircularReveal(v, cx, cy, initialRadius, 0);
+				anim.setInterpolator(new AccelerateDecelerateInterpolator());
 
-			// make the view invisible when the animation is done
-			anim.addListener(new AnimatorListenerAdapter() {
-				@Override
-				public void onAnimationEnd(Animator animation) {
-					super.onAnimationEnd(animation);
-					v.setVisibility(View.INVISIBLE);
-				}
-			});
+				// make the view invisible when the animation is done
+				anim.addListener(new AnimatorListenerAdapter() {
+					@Override
+					public void onAnimationEnd(Animator animation) {
+						super.onAnimationEnd(animation);
+						v.setVisibility(View.INVISIBLE);
+					}
+				});
 
-			// start the animation
-			anim.start();
+				// start the animation
+				anim.start();
+			}
+		}
+		catch (Exception e) {
+			Log.e(TAG, "Error creating circular hide: " + e.toString());
+			v.setVisibility(View.INVISIBLE);
 		}
 	}
 
@@ -231,5 +255,61 @@ public class Utils {
 		point.x = (int) (v.getX() + (v.getMeasuredWidth() / 2));
 		point.y = (int) (v.getY() + (v.getMeasuredHeight() / 2));
 		return point;
+	}
+
+	public static int getThemeKeyFromWallpaper(Context context) {
+		Palette p = getWallpaperPalette(context);
+		int color = p.getVibrantColor(context.getResources().getColor(R.color.Accent));
+		return whatColor(color);
+	}
+
+	public static int whatColor(int color) {
+		float[] hsv = new float[3];
+		int result;
+
+		Color.colorToHSV(color, hsv);
+
+		if (hsv[1] == 0) {
+			// GREY
+			result = 1;
+		}
+		else {
+			float hue = hsv[0];
+
+			if (hue <= 14f) {
+				// RED
+				result = 2;
+			}
+			else if (hue <= 33f) {
+				// ORANGE
+				result = 3;
+			}
+			else if (hue <= 70f) {
+				// YELLOW
+				result = 4;
+			}
+			else if (hue <= 180) {
+				// GREEN
+				result = 5;
+			}
+			else if (hue <= 260f) {
+				// BLUE
+				result = 6;
+			}
+			else if (hue <= 300f) {
+				// PURPLE
+				result = 7;
+			}
+			else if (hue <= 360f) {
+				// PINK
+				result = 8;
+			}
+			else {
+				// who knows?
+				result = 0;
+			}
+		}
+
+		return result;
 	}
 }

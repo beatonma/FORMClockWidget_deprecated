@@ -36,12 +36,15 @@ import com.beatonma.formclockwidget.R;
 public class FormClockView extends View {
 	private Handler mMainThreadHandler = new Handler();
 	private FormClockRenderer mHourMinRenderer;
+	private FormClockRenderer mSecondsRenderer;
 
 	private int mWidth, mHeight;
 
 	private int mColor1, mColor2, mColor3;
 
 	private FormClockRenderer.Options mHourMinOptions, mSecondsOptions;
+
+	private boolean showSeconds = false;
 
 	public FormClockView(Context context) {
 		super(context);
@@ -82,11 +85,13 @@ public class FormClockView extends View {
 		mHourMinOptions.glyphAnimAverageDelay = 500;
 		mHourMinOptions.glyphAnimDuration = 2000;
 
-		mSecondsOptions = new FormClockRenderer.Options(mHourMinOptions);
-		mSecondsOptions.onlySeconds = true;
-		mSecondsOptions.textSize /= 2;
-		mSecondsOptions.glyphAnimAverageDelay = 0;
-		mSecondsOptions.glyphAnimDuration = 750;
+		if (showSeconds) {
+			mSecondsOptions = new FormClockRenderer.Options(mHourMinOptions);
+			mSecondsOptions.onlySeconds = true;
+			mSecondsOptions.textSize /= 2;
+			mSecondsOptions.glyphAnimAverageDelay = 0;
+			mSecondsOptions.glyphAnimDuration = 750;
+		}
 
 		mColor1 = a.getColor(R.styleable.FormClockView_color1, 0xff000000);
 		mColor2 = a.getColor(R.styleable.FormClockView_color2, 0xff888888);
@@ -99,11 +104,17 @@ public class FormClockView extends View {
 
 	private void regenerateRenderers() {
 		mHourMinRenderer = new FormClockRenderer(mHourMinOptions, null);
+		if (showSeconds) {
+			mSecondsRenderer = new FormClockRenderer(mSecondsOptions, null);
+		}
 		updatePaints();
 	}
 
 	public void setTextSize(int size) {
 		mHourMinOptions.textSize = size;
+		if (showSeconds) {
+			mSecondsOptions.textSize = size / 2;
+		}
 		regenerateRenderers();
 	}
 
@@ -129,6 +140,9 @@ public class FormClockView extends View {
 		paints.fills[2] = paint;
 
 		mHourMinRenderer.setPaints(paints);
+		if (showSeconds) {
+			mSecondsRenderer.setPaints(paints);
+		}
 		invalidate();
 	}
 
@@ -137,17 +151,6 @@ public class FormClockView extends View {
 		mColor2 = color2;
 		mColor3 = color3;
 		regenerateRenderers();
-		//updatePaints();
-	}
-
-	public void setSize(int w, int h) {
-		int oldW = mWidth;
-		int oldH = mHeight;
-
-		mWidth = w;
-		mHeight = h;
-
-		onSizeChanged(w, h, oldW, oldH);
 	}
 
 	@Override
@@ -155,6 +158,13 @@ public class FormClockView extends View {
 		super.onSizeChanged(w, h, oldw, oldh);
 		mWidth = w;
 		mHeight = h;
+	}
+
+	public void updateTime() {
+		/*mHourMinRenderer.updateTime();
+		if (showSeconds) {
+			mSecondsRenderer.updateTime();
+		}*/
 	}
 
 	@Override
@@ -168,11 +178,32 @@ public class FormClockView extends View {
 				(mHeight - hourMinSize.y) / 2,
 				false);
 
-		long timeToNextHourMinAnimation = mHourMinRenderer.timeToNextAnimation();
-		if (timeToNextHourMinAnimation < 0) {
-			postInvalidateOnAnimation();
-		} else {
-			postInvalidateDelayed(timeToNextHourMinAnimation);
+		if (showSeconds) {
+			mSecondsRenderer.updateTime();
+			PointF secondsSize = mSecondsRenderer.measure();
+			mSecondsRenderer.draw(canvas,
+					(mWidth + hourMinSize.x) / 2 - secondsSize.x,
+					(mHeight + hourMinSize.y) / 2
+							+ TypedValue.applyDimension(5, TypedValue.COMPLEX_UNIT_DIP,
+							getResources().getDisplayMetrics()),
+					false);
+
+
+			long timeToNextSecondsAnimation = mSecondsRenderer.timeToNextAnimation();
+			long timeToNextHourMinAnimation = mHourMinRenderer.timeToNextAnimation();
+			if (timeToNextHourMinAnimation < 0 || timeToNextSecondsAnimation < 0) {
+				postInvalidateOnAnimation();
+			} else {
+				postInvalidateDelayed(Math.min(timeToNextHourMinAnimation, timeToNextSecondsAnimation));
+			}
+		}
+		else {
+			long timeToNextHourMinAnimation = mHourMinRenderer.timeToNextAnimation();
+			if (timeToNextHourMinAnimation < 0) {
+				postInvalidateOnAnimation();
+			} else {
+				postInvalidateDelayed(timeToNextHourMinAnimation);
+			}
 		}
 	}
 
@@ -203,7 +234,9 @@ public class FormClockView extends View {
 		public void onChange(boolean selfChange) {
 			super.onChange(selfChange);
 			mHourMinOptions.is24hour = DateFormat.is24HourFormat(getContext());
-			mSecondsOptions.is24hour = mHourMinOptions.is24hour;
+			if (showSeconds) {
+				mSecondsOptions.is24hour = mHourMinOptions.is24hour;
+			}
 			regenerateRenderers();
 		}
 	};

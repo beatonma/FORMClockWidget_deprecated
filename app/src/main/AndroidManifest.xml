@@ -5,7 +5,7 @@
     <application
         android:allowBackup="true"
         android:label="@string/app_name"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_launcher"
         android:theme="@style/AppTheme">
 
         <activity android:name=".ConfigActivity">
@@ -22,11 +22,14 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.beatonma.formclockwidget.UPDATE" />
+                <action android:name="com.beatonma.formclockwidget.ANIMATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/appwidget_info" />
         </receiver>
+
+        <service android:name=".WidgetAnimationService" />
     </application>
 
 </manifest>

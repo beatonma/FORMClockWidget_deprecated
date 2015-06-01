@@ -10,6 +10,3 @@
     android:widgetCategory="home_screen|keyguard"
     android:initialKeyguardLayout="@layout/widget_layout">
 </appwidget-provider>
-
-
-    <!--android:configure="com.beatonma.formclockwidget.ConfigActivity"-->

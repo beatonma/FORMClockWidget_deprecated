@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
                   xmlns:color="http://schemas.android.com/apk/res-auto">
+
     <CheckBoxPreference
         android:defaultValue="false"
         android:title="@string/pref_use_wallpaper_palette"
         android:summary="@string/pref_use_wallpaper_palette_summary"
         android:key="pref_use_wallpaper_palette"/>
 
-    <PreferenceCategory android:title="@string/pref_colors_category">
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:title="@string/pref_enable_animation"
+        android:summary="@string/pref_enable_animation_summary"
+        android:key="pref_enable_animation"/>
+
+    <!--<PreferenceCategory android:title="@string/pref_colors_category">
         <com.beatonma.colorpicker.ColorPreference
             android:title="@string/pref_color1"
             android:key="pref_color1"
@@ -32,5 +39,5 @@
             color:default_swatch="6"
             color:default_color="6" />
 
-    </PreferenceCategory>
+    </PreferenceCategory>-->
 </PreferenceScreen>

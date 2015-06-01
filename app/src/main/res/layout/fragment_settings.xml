@@ -1,40 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
+    android:layout_height="match_parent"
+    android:background="@color/White"
+    android:fillViewport="true">
     <LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="8dp"
-        android:gravity="center_horizontal"
-        android:orientation="horizontal"
         android:background="@color/White"
         android:padding="16dp"
-        android:elevation="8dp">
+        android:clipToPadding="false"
+        android:id="@+id/container">
 
-        <ImageButton
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            android:layout_margin="4dp"
-            android:id="@+id/button_color1"
-            android:elevation="4dp"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="horizontal"
+            android:background="@color/White"
+            android:paddingBottom="8dp"
+            android:id="@+id/colors_container"
+            android:clipToPadding="false">
 
-        <ImageButton
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            android:layout_margin="4dp"
-            android:id="@+id/button_color2"
-            android:elevation="4dp"/>
+            <ImageButton
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:layout_margin="8dp"
+                android:id="@+id/button_color1"
+                android:elevation="4dp"
+                android:stateListAnimator="@anim/raise"/>
 
-        <ImageButton
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            android:layout_margin="4dp"
-            android:id="@+id/button_color3"
-            android:elevation="4dp"/>
+            <ImageButton
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:layout_margin="8dp"
+                android:id="@+id/button_color2"
+                android:elevation="4dp"
+                android:stateListAnimator="@anim/raise"/>
+
+            <ImageButton
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:layout_margin="8dp"
+                android:id="@+id/button_color3"
+                android:elevation="4dp"
+                android:stateListAnimator="@anim/raise"/>
+        </LinearLayout>
+
+        <fragment
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="-20dp"
+            android:layout_marginEnd="-20dp"
+            android:name="com.beatonma.formclockwidget.PrefsFragment"
+            android:id="@+id/prefs_fragment" />
+
     </LinearLayout>
-
-</LinearLayout>
+</ScrollView>

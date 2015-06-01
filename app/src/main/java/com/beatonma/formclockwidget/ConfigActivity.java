@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.v7.graphics.Palette;
 import android.util.Log;
 import android.view.View;
@@ -31,13 +30,9 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 
 	boolean currentPreview = true;
 	View headerView;
-	ImageView backgroundTrue;
-	ImageView backgroundFalse;
 
 	FormClockView clockTrue;
 	FormClockView clockFalse;
-
-	Handler handler = new Handler();
 
 	// User preferences
 	boolean useWallpaperPalette = false;
@@ -51,15 +46,12 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 		context = this;
 
 		setContentView(R.layout.activity_config);
-		replaceFragment(PrefsFragment.newInstance());
-//		replaceFragment(SettingsFragment.newInstance());	Nicer version but needs much more work
+		replaceFragment(SettingsFragment.newInstance());
 
 		loadSharedPreferences();
 		preferences.registerOnSharedPreferenceChangeListener(this);
 
 		headerView = findViewById(R.id.header_view);
-		backgroundTrue = (ImageView) findViewById(R.id.background1);
-		backgroundFalse = (ImageView) findViewById(R.id.background2);
 
 		clockTrue = (FormClockView) findViewById(R.id.clock_view_1);
 		clockFalse = (FormClockView) findViewById(R.id.clock_view_2);
@@ -75,28 +67,36 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 	}
 
 	private void init() {
-		initBackground(backgroundTrue);
-		initBackground(backgroundFalse);
+		initBackground();
 
 		initClockView(clockTrue);
 		initClockView(clockFalse);
 
-		View overlay = findViewById(R.id.header_overlay);
-		Utils.setBackground(
-				overlay,
-				getResources().getColor(R.color.Overlay),
-				getResources().getColor(R.color.AccentLight));
+		if (Utils.isLollipop()) {
+			View overlay = findViewById(R.id.header_overlay);
+			if (overlay != null) {
+				Utils.setBackground(
+						overlay,
+						getResources().getColor(R.color.Overlay),
+						getResources().getColor(R.color.AccentLight));
+			}
+		}
 	}
 
-	private void initBackground(ImageView v) {
-		v.setImageBitmap(Utils.getWallpaperBitmap(context));
+	private void initBackground() {
+		ImageView wallpaper = (ImageView) findViewById(R.id.wallpaper);
+		wallpaper.setImageBitmap(Utils.getWallpaperBitmap(context));
 	}
 
 	private void initClockView(FormClockView clock) {
+		if (useWallpaperPalette) {
+			loadColorsFromWallpaper();
+		}
+
 		clock.setColors(color1, color2, color3);
 	}
 
-	private void updatePreview() {
+	public void updatePreview() {
 		View top = findViewById(R.id.preview2);
 
 		if (useWallpaperPalette) {
@@ -126,8 +126,22 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 	}
 
 	@Override
+	public void onResume() {
+		super.onResume();
+		initBackground();
+		loadColorsFromWallpaper();
+		updatePreview();
+		if (preferences != null) {
+			preferences.registerOnSharedPreferenceChangeListener(this);
+		}
+	}
+
+	@Override
 	public void onPause() {
 		super.onPause();
+		if (preferences != null) {
+			preferences.unregisterOnSharedPreferenceChangeListener(this);
+		}
 	}
 
 	@Override
@@ -141,6 +155,7 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 	private void loadSharedPreferences() {
 		preferences = getSharedPreferences(PREFS, Activity.MODE_PRIVATE);
 		useWallpaperPalette = preferences.getBoolean("pref_use_wallpaper_palette", false);
+
 		color1 = ColorUtils.getColorFromPreference(preferences, "pref_color1", Color.WHITE);
 		color2 = ColorUtils.getColorFromPreference(preferences, "pref_color2", Color.GRAY);
 		color3 = ColorUtils.getColorFromPreference(preferences, "pref_color3", Color.BLACK);
@@ -150,8 +165,16 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 		FragmentManager fm = getFragmentManager();
 		fm.beginTransaction()
 				.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
-				.replace(R.id.fragment_container, fragment)
+				.replace(R.id.fragment_container, fragment, "main")
 				.commit();
+	}
+
+	public void updateFragments() {
+		FragmentManager fm = getFragmentManager();
+		SettingsFragment settingsFragment = (SettingsFragment) fm.findFragmentByTag("main");
+		if (settingsFragment != null) {
+			settingsFragment.updatePreferences(preferences);
+		}
 	}
 
 	@Override
@@ -159,5 +182,6 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 		Log.d(TAG, "SharedPreferenceChanged");
 		loadSharedPreferences();
 		updatePreview();
+		updateFragments();
 	}
 }
