@@ -15,38 +15,110 @@
     </style>
 
     <style name="Red" parent="AppTheme">
+        <item name="android:colorPrimary">@color/Red500</item>
+        <item name="android:colorAccent">@color/Red500</item>
         <item name="android:colorControlActivated">@color/Red500</item>
     </style>
 
     <style name="Pink" parent="AppTheme">
+        <item name="android:colorPrimary">@color/Pink500</item>
+        <item name="android:colorAccent">@color/Pink500</item>
         <item name="android:colorControlActivated">@color/Pink500</item>
     </style>
 
     <style name="DeepPurple" parent="AppTheme">
+        <item name="android:colorPrimary">@color/DeepPurple500</item>
+        <item name="android:colorAccent">@color/DeepPurple500</item>
         <item name="android:colorControlActivated">@color/DeepPurple500</item>
     </style>
 
     <style name="Blue" parent="AppTheme">
+        <item name="android:colorPrimary">@color/Blue500</item>
+        <item name="android:colorAccent">@color/Blue500</item>
         <item name="android:colorControlActivated">@color/Blue500</item>
     </style>
 
     <style name="Green" parent="AppTheme">
+        <item name="android:colorPrimary">@color/Green500</item>
+        <item name="android:colorAccent">@color/Green500</item>
         <item name="android:colorControlActivated">@color/Green500</item>
     </style>
 
     <style name="Amber" parent="AppTheme">
+        <item name="android:colorPrimary">@color/Amber500</item>
+        <item name="android:colorAccent">@color/Amber500</item>
         <item name="android:colorControlActivated">@color/Amber500</item>
     </style>
 
     <style name="DeepOrange" parent="AppTheme">
+        <item name="android:colorPrimary">@color/DeepOrange500</item>
+        <item name="android:colorAccent">@color/DeepOrange500</item>
         <item name="android:colorControlActivated">@color/DeepOrange500</item>
     </style>
 
     <style name="Brown" parent="AppTheme">
+        <item name="android:colorPrimary">@color/Brown500</item>
+        <item name="android:colorAccent">@color/Brown500</item>
         <item name="android:colorControlActivated">@color/Brown500</item>
     </style>
 
     <style name="Grey" parent="AppTheme">
+        <item name="android:colorPrimary">@color/Grey500</item>
+        <item name="android:colorAccent">@color/Grey500</item>
         <item name="android:colorControlActivated">@color/Grey500</item>
     </style>
+
+    <!--<style name="Red" parent="AppTheme">-->
+        <!--<item name="android:colorPrimary">@color/Red500</item>-->
+        <!--<item name="android:colorAccent">@color/DeepPurple500</item>-->
+        <!--<item name="android:colorControlActivated">@color/DeepPurple500</item>-->
+    <!--</style>-->
+
+    <!--<style name="Pink" parent="AppTheme">-->
+        <!--<item name="android:colorPrimary">@color/Pink500</item>-->
+        <!--<item name="android:colorAccent">@color/Amber500</item>-->
+        <!--<item name="android:colorControlActivated">@color/Amber500</item>-->
+    <!--</style>-->
+
+    <!--<style name="DeepPurple" parent="AppTheme">-->
+        <!--<item name="android:colorPrimary">@color/DeepPurple500</item>-->
+        <!--<item name="android:colorAccent">@color/DeepOrange500</item>-->
+        <!--<item name="android:colorControlActivated">@color/DeepOrange500</item>-->
+    <!--</style>-->
+
+    <!--<style name="Blue" parent="AppTheme">-->
+        <!--<item name="android:colorPrimary">@color/Blue500</item>-->
+        <!--<item name="android:colorAccent">@color/Pink500</item>-->
+        <!--<item name="android:colorControlActivated">@color/Pink500</item>-->
+    <!--</style>-->
+
+    <!--<style name="Green" parent="AppTheme">-->
+        <!--<item name="android:colorPrimary">@color/Green500</item>-->
+        <!--<item name="android:colorAccent">@color/Lime500</item>-->
+        <!--<item name="android:colorControlActivated">@color/Lime500</item>-->
+    <!--</style>-->
+
+    <!--<style name="Amber" parent="AppTheme">-->
+        <!--<item name="android:colorPrimary">@color/Amber500</item>-->
+        <!--<item name="android:colorAccent">@color/Red500</item>-->
+        <!--<item name="android:colorControlActivated">@color/Red500</item>-->
+    <!--</style>-->
+
+    <!--<style name="DeepOrange" parent="AppTheme">-->
+        <!--<item name="android:colorPrimary">@color/DeepOrange500</item>-->
+        <!--<item name="android:colorAccent">@color/Brown500</item>-->
+        <!--<item name="android:colorControlActivated">@color/Brown500</item>-->
+    <!--</style>-->
+
+    <!--<style name="Brown" parent="AppTheme">-->
+        <!--<item name="android:colorPrimary">@color/Brown500</item>-->
+        <!--<item name="android:colorAccent">@color/Orange500</item>-->
+        <!--<item name="android:colorControlActivated">@color/Orange500</item>-->
+    <!--</style>-->
+
+    <!--<style name="Grey" parent="AppTheme">-->
+        <!--<item name="android:colorPrimary">@color/Grey500</item>-->
+        <!--<item name="android:colorAccent">@color/Teal500</item>-->
+        <!--<item name="android:colorControlActivated">@color/Teal500</item>-->
+    <!--</style>-->
 </resources>

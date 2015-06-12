@@ -19,27 +19,40 @@ import java.util.Calendar;
  * until WidgetProvider.ANIMATION_START_SECOND of the next minute. While active, the service
  * sends update requests to the widget provider every FRAME_DELAY milliseconds. This makes the
  * widget animate. When the animation period is complete, the service stops itself.
+ *
+ * If animation is not enabled, this service stays alive in the background and updates when
+ * it receives any of the intents detailed in INTENT_FILTER.
  */
 public class WidgetAnimationService extends Service {
 	private final static String TAG = "AnimationService";
 	private final static int FRAME_DELAY = 33; // ~30fps
-	private boolean enableAnimation = false;
-	private static final IntentFilter timeIntentFilter;
+	private static final IntentFilter INTENT_FILTER;
 
 	static {
-		timeIntentFilter = new IntentFilter();
-		timeIntentFilter.addAction(Intent.ACTION_TIME_TICK);
-		timeIntentFilter.addAction(Intent.ACTION_TIMEZONE_CHANGED);
-		timeIntentFilter.addAction(Intent.ACTION_TIME_CHANGED);
+		INTENT_FILTER = new IntentFilter();
+		INTENT_FILTER.addAction(Intent.ACTION_TIME_TICK);
+		INTENT_FILTER.addAction(Intent.ACTION_TIMEZONE_CHANGED);
+		INTENT_FILTER.addAction(Intent.ACTION_TIME_CHANGED);
+		INTENT_FILTER.addAction("com.google.android.apps.muzei.ACTION_ARTWORK_CHANGED");
+		INTENT_FILTER.addAction("com.beatonma.formclockwidget.EXTERNAL_LWP");
 	}
 
+	private Handler handler = new Handler();
+	private Runnable animationRunnable = new Runnable() {
+		@Override
+		public void run() {
+			animatedWidgetUpdate();
+		}
+	};
+
 	public WidgetAnimationService() {
+
 	}
 
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		registerReceiver(timeChangedReceiver, timeIntentFilter);
+		registerReceiver(timeChangedReceiver, INTENT_FILTER);
 	}
 
 	@Override
@@ -48,42 +61,34 @@ public class WidgetAnimationService extends Service {
 		unregisterReceiver(timeChangedReceiver);
 	}
 
-	Handler handler = new Handler();
-	Runnable animationRunnable = new Runnable() {
-		@Override
-		public void run() {
-			animatedWidgetUpdate();
-		}
-	};
-
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		doUpdate();
 		return START_STICKY;
 	}
 
-	public void doUpdate() {
-		SharedPreferences sp = getBaseContext().getSharedPreferences(ConfigActivity.PREFS, MODE_PRIVATE);
-		enableAnimation = sp.getBoolean("pref_enable_animation", false);
+	private void doUpdate() {
+		SharedPreferences sp = getBaseContext().getSharedPreferences(PrefUtils.PREFS, MODE_PRIVATE);
+		boolean enableAnimation = sp.getBoolean("pref_enable_animation", false);
 
 		Log.d(TAG, "UPDATE SERVICE STARTED");
 		if (enableAnimation) {
 			handler.post(animationRunnable);
 		}
 		else {
-			widgetUpdate();
+			staticWidgetUpdate();
 		}
 	}
 
 	// Single update call, no animation
-	public void widgetUpdate() {
+	private void staticWidgetUpdate() {
 		Intent updateIntent = new Intent(this, WidgetProvider.class);
 		updateIntent.setAction(WidgetProvider.ANIMATE);
 		sendBroadcast(updateIntent);
 	}
 
 	// Repeated update calls while 58 < [second] < 1
-	public void animatedWidgetUpdate() {
+	private void animatedWidgetUpdate() {
 		Intent intent = new Intent(this, WidgetProvider.class);
 		intent.setAction(WidgetProvider.ANIMATE);
 		sendBroadcast(intent);
@@ -100,13 +105,13 @@ public class WidgetAnimationService extends Service {
 		}
 	}
 
-	public void finishWidgetAnimation() {
+	private void finishWidgetAnimation() {
 		Intent intent = new Intent(this, WidgetProvider.class);
 		intent.setAction(WidgetProvider.FINISHED);
 		sendBroadcast(intent);
 	}
 
-	public void stop() {
+	private void stop() {
 		handler.removeCallbacks(animationRunnable);
 		stopSelf();
 	}

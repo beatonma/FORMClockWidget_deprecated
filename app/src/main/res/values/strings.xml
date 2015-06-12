@@ -4,13 +4,39 @@
     <string name="preview_description">Widget preview</string>
 
     <!-- User settings -->
+    <string-array name="prefs_titles">
+        <item>Theme</item>
+        <item>Complications</item>
+        <!--<item>Notifications</item>-->
+        <item>Other</item>
+    </string-array>
+
+    <!-- Category: Theme -->
     <string name="pref_use_wallpaper_palette">Use wallpaper palette</string>
     <string name="pref_use_wallpaper_palette_summary">Automatically pick colors from your current wallpaper.</string>
+
+    <!-- Category: Complications -->
+    <string name="pref_complication_date">Date</string>
+    <string name="pref_complication_date_summary"></string>
+    <string name="pref_complication_alarm">Next alarm</string>
+    <string name="pref_complication_alarm_summary"></string>
+
+    <!-- Category: Notifications -->
+    <string name="pref_notifications_enable">Enable</string>
+    <string name="pref_notifications_enable_summary"></string>
+
+    <!-- Category: Other -->
     <string name="pref_enable_animation">Enable animation</string>
     <string name="pref_enable_animation_summary">Warning: widgets are really not meant to animate. Enabling animation may cause performance issues, including increased battery consumption!</string>
+    <string name="pref_on_touch">Touch shortcut</string>
+    <string name="pref_on_touch_summary">Choose an app to open when the widget is touched.</string>
 
-    <string name="pref_colors_category">Colors</string>
+
+    <!-- Error messages -->
+    <string name="error_applist">Error getting apps list.</string>
+    <string name="error_retry">Retry</string>
+    <!--<string name="pref_colors_category">Colors</string>
     <string name="pref_color1">Color 1</string>
     <string name="pref_color2">Color 2</string>
-    <string name="pref_color3">Color 3</string>
+    <string name="pref_color3">Color 3</string>-->
 </resources>

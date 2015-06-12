@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:title="@string/pref_complication_date"
+        android:summary="@string/pref_complication_date_summary"
+        android:key="pref_complication_date"/>
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:title="@string/pref_complication_alarm"
+        android:summary="@string/pref_complication_alarm_summary"
+        android:key="pref_complication_alarm"/>
+</PreferenceScreen>

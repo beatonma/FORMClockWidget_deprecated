@@ -12,9 +12,11 @@
 
     <color name="TextPrimary">#D8000000</color>
     <color name="TextSecondary">#89000000</color>
+    <color name="TextPrimaryLight">#D8FFFFFF</color>
+    <color name="TextSecondaryLight">#89FFFFFF</color>
 
     <color name="Dialog">#eeeeee</color>
-    <color name="Overlay">#11aaaaaa</color>
+    <color name="Overlay">#22aaaaaa</color>
     <color name="OverlayAccent">#33FF1744</color>
 
     <color name="Red500">#f44336</color>

@@ -72,6 +72,10 @@ public class FormClockRenderer {
 
 	private PointF mMeasuredSize = new PointF();
 
+	private boolean showShadow = false;
+	private Canvas shadowCanvas;
+	private Bitmap shadowBitmap;
+
 	public FormClockRenderer(Options options) {
 		this.mOptions = options;
 	}
@@ -115,6 +119,14 @@ public class FormClockRenderer {
 		mOffsGlyphCanvas = new Canvas(mOffsGlyphBitmap);
 		mOffsGlyphPaint = new Paint();
 		mOffsGlyphPaint.setFilterBitmap(true);
+
+		if (showShadow) {
+			shadowBitmap = Bitmap.createBitmap(
+					mOffsGlyphBitmapUnpaddedSize * 2,
+					mOffsGlyphBitmapUnpaddedSize * 2,
+					Bitmap.Config.ARGB_8888);
+			shadowCanvas = new Canvas(shadowBitmap);
+		}
 	}
 
 	public void setPaints(ClockPaints paints) {
@@ -229,17 +241,19 @@ public class FormClockRenderer {
 	}
 
 	/**
-	 * Added by Michael Beaton 2015/06/01
 	 * Finds the largest text size that can render 00:00 in a given width.
 	 */
 	public int getMaxTextSize(Context context, int layoutWidth) {
 		float colonWidth = mFont.getGlyph(":").getWidthAtProgress(0);
-		float zeroWidth = mFont.getGlyph("0").getWidthAtProgress(0);
+		float zeroWidth = mFont.getGlyph("0").getWidthAtProgress(0.5f);
+		int charSpacing = Utils.dpToPx(context, (int) mOptions.charSpacing) * 4;
 		float totalWidth = (zeroWidth * 4)
 				+ colonWidth
-				+ Utils.dpToPx(context, (int) (mOptions.charSpacing * 6));
+				+ charSpacing;
 
 		int textSize = (int) (Font.DRAWHEIGHT * layoutWidth / totalWidth);
+		Log.d("", "charspacing: " + charSpacing);
+		Log.d("", "textSize: " + textSize);
 
 		return textSize;
 	}
@@ -295,6 +309,9 @@ public class FormClockRenderer {
 		}, new RectF());
 
 		canvas.restoreToCount(sc);
+		if (showShadow && shadowBitmap != null && mPaints.shadow != null) {
+			canvas.drawBitmap(shadowBitmap, 0, 0, mPaints.shadow);
+		}
 
 		mFont.canvas = null;
 	}
@@ -370,8 +387,10 @@ public class FormClockRenderer {
 	public static class ClockPaints {
 		public Paint fills[] = new Paint[3];
 		public Paint strokes[] = new Paint[3]; // optional
-		public Paint date;
+		public Paint date = new Paint();
+		public Paint shadow = new Paint();
 		public boolean hasStroke = false;
+		public boolean hasShadow = false;
 	}
 
 	public interface Glyph {
@@ -390,6 +409,7 @@ public class FormClockRenderer {
 		private static final int COLOR_1 = 0;
 		private static final int COLOR_2 = 1;
 		private static final int COLOR_3 = 2;
+		private static final int SHADOW = 3;
 
 		private Map<String, Glyph> mGlyphMap = new HashMap<>();
 
@@ -426,14 +446,35 @@ public class FormClockRenderer {
 			canvas.drawArc(tempRectF, startAngle, sweepAngle, useCenter, paint);
 		}
 
+		private void drawArcShadow(float l, float t, float r, float b, float startAngle, float sweepAngle, boolean useCenter) {
+			if (shadowBitmap != null && shadowCanvas != null && mPaints.shadow != null) {
+				tempRectF.set(l, t, r, b);
+				shadowCanvas.drawArc(tempRectF, startAngle, sweepAngle, useCenter, mPaints.shadow);
+			}
+		}
+
 		private void drawRoundRect(float l, float t, float r, float b, float rx, float ry, Paint paint) {
 			tempRectF.set(l, t, r, b);
 			canvas.drawRoundRect(tempRectF, rx, ry, paint);
 		}
 
+		private void drawRoundRectShadow(float l, float t, float r, float b, float rx, float ry) {
+			if (shadowBitmap != null && shadowCanvas != null && mPaints.shadow != null) {
+				tempRectF.set(l, t, r, b);
+				canvas.drawRoundRect(tempRectF, rx, ry, mPaints.shadow);
+			}
+		}
+
 		private void drawOval(float l, float t, float r, float b, Paint paint) {
 			tempRectF.set(l, t, r, b);
 			canvas.drawOval(tempRectF, paint);
+		}
+
+		private void drawOvalShadow(float l, float t, float r, float b) {
+			if (shadowBitmap != null && shadowCanvas != null && mPaints.shadow != null) {
+				tempRectF.set(l, t, r, b);
+				canvas.drawOval(tempRectF, mPaints.shadow);
+			}
 		}
 
         /*
@@ -445,12 +486,18 @@ public class FormClockRenderer {
 			if (mPaints.hasStroke) {
 				drawArc(l, t, r, b, startAngle, sweepAngle, useCenter, mPaints.strokes[color]);
 			}
+			if (mPaints.hasShadow) {
+				drawArc(l, t, r, b, startAngle, sweepAngle, useCenter, mPaints.shadow);
+			}
 		}
 
 		private void drawRoundRect(float l, float t, float r, float b, float rx, float ry, int color) {
 			drawRoundRect(l, t, r, b, rx, ry, mPaints.fills[color]);
 			if (mPaints.hasStroke) {
 				drawRoundRect(l, t, r, b, rx, ry, mPaints.strokes[color]);
+			}
+			if (mPaints.hasShadow) {
+				drawRoundRectShadow(l, t, r, b, rx, ry);
 			}
 		}
 
@@ -459,6 +506,9 @@ public class FormClockRenderer {
 			if (mPaints.hasStroke) {
 				drawOval(l, t, r, b, mPaints.strokes[color]);
 			}
+			if (mPaints.hasShadow) {
+				drawOvalShadow(l, t, r, b);
+			}
 		}
 
 		private void drawRect(float l, float t, float r, float b, int color) {
@@ -466,12 +516,18 @@ public class FormClockRenderer {
 			if (mPaints.hasStroke) {
 				canvas.drawRect(l, t, r, b, mPaints.strokes[color]);
 			}
+			if (mPaints.hasShadow && shadowBitmap != null && shadowCanvas != null && mPaints.shadow != null) {
+				shadowCanvas.drawRect(l, t, r, b, mPaints.shadow);
+			}
 		}
 
 		private void drawPath(Path path, int color) {
 			canvas.drawPath(path, mPaints.fills[color]);
 			if (mPaints.hasStroke) {
 				canvas.drawPath(path, mPaints.strokes[color]);
+			}
+			if (mPaints.hasShadow && shadowBitmap != null && shadowCanvas != null && mPaints.shadow != null) {
+				shadowCanvas.drawPath(path, mPaints.shadow);
 			}
 		}
 

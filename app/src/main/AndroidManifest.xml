@@ -23,6 +23,7 @@
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.beatonma.formclockwidget.UPDATE" />
                 <action android:name="com.beatonma.formclockwidget.ANIMATE" />
+                <action android:name="com.beatonma.formclockwidget.EXTERNAL_LWP" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -30,6 +31,7 @@
         </receiver>
 
         <service android:name=".WidgetAnimationService" />
+        <service android:name=".WidgetColorService" />
     </application>
 
 </manifest>

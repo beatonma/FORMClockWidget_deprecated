@@ -1,18 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-                  xmlns:color="http://schemas.android.com/apk/res-auto">
-
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
     <CheckBoxPreference
         android:defaultValue="false"
         android:title="@string/pref_use_wallpaper_palette"
         android:summary="@string/pref_use_wallpaper_palette_summary"
         android:key="pref_use_wallpaper_palette"/>
 
-    <CheckBoxPreference
+    <!--<CheckBoxPreference
+        android:defaultValue="false"
+        android:title="@string/pref_complication_date"
+        android:summary="@string/pref_complication_date_summary"
+        android:key="pref_show_date"/>-->
+
+    <!--<CheckBoxPreference
         android:defaultValue="false"
         android:title="@string/pref_enable_animation"
         android:summary="@string/pref_enable_animation_summary"
         android:key="pref_enable_animation"/>
+
+    <Preference
+        android:title="@string/pref_on_touch"
+        android:summary="@string/pref_on_touch_summary"
+        android:key="pref_on_touch" />-->
 
     <!--<PreferenceCategory android:title="@string/pref_colors_category">
         <com.beatonma.colorpicker.ColorPreference

@@ -17,12 +17,15 @@
 package net.nurik.roman.formwatchface.common;
 
 import android.annotation.TargetApi;
+import android.app.AlarmManager;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.database.ContentObserver;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Handler;
 import android.provider.Settings;
@@ -32,6 +35,9 @@ import android.util.TypedValue;
 import android.view.View;
 
 import com.beatonma.formclockwidget.R;
+import com.beatonma.formclockwidget.Utils;
+
+import java.util.Calendar;
 
 public class FormClockView extends View {
 	private Handler mMainThreadHandler = new Handler();
@@ -44,7 +50,22 @@ public class FormClockView extends View {
 
 	private FormClockRenderer.Options mHourMinOptions, mSecondsOptions;
 
+	// Complications
 	private boolean showSeconds = false;
+	private boolean showDate = false;
+	private boolean showAlarm = false;
+	private int dateSize = 96;
+	private String dateStr = "";
+	private String dateFormat = "EEEE d MMMM";
+	private String alarmStr = "";
+	private String alarmFormat = "EEEE H:mm";
+	private AlarmContainer alarm;
+
+	private int clockSecondsSpacing;
+
+	FormClockRenderer.ClockPaints paints;
+
+	private boolean isPreview = false;
 
 	public FormClockView(Context context) {
 		super(context);
@@ -85,36 +106,38 @@ public class FormClockView extends View {
 		mHourMinOptions.glyphAnimAverageDelay = 500;
 		mHourMinOptions.glyphAnimDuration = 2000;
 
-		if (showSeconds) {
-			mSecondsOptions = new FormClockRenderer.Options(mHourMinOptions);
-			mSecondsOptions.onlySeconds = true;
-			mSecondsOptions.textSize /= 2;
-			mSecondsOptions.glyphAnimAverageDelay = 0;
-			mSecondsOptions.glyphAnimDuration = 750;
-		}
+		clockSecondsSpacing = getResources().getDimensionPixelSize(R.dimen.seconds_clock_spacing);
+		dateSize = getResources().getDimensionPixelSize(R.dimen.seconds_clock_height);
+
+		mSecondsOptions = new FormClockRenderer.Options(mHourMinOptions);
+		mSecondsOptions.onlySeconds = true;
+		mSecondsOptions.textSize /= 2;
+		mSecondsOptions.glyphAnimAverageDelay = 0;
+		mSecondsOptions.glyphAnimDuration = 750;
 
 		mColor1 = a.getColor(R.styleable.FormClockView_color1, 0xff000000);
 		mColor2 = a.getColor(R.styleable.FormClockView_color2, 0xff888888);
 		mColor3 = a.getColor(R.styleable.FormClockView_color3, 0xffcccccc);
 
+		isPreview = a.getBoolean(R.styleable.FormClockView_isPreview, false);
+
 		a.recycle();
+
+		alarmFormat = mHourMinOptions.is24hour ? "EEEE H:mm" : "EEEE K:mm";
+		alarm = new AlarmContainer();
 
 		regenerateRenderers();
 	}
 
 	private void regenerateRenderers() {
 		mHourMinRenderer = new FormClockRenderer(mHourMinOptions, null);
-		if (showSeconds) {
-			mSecondsRenderer = new FormClockRenderer(mSecondsOptions, null);
-		}
+		mSecondsRenderer = new FormClockRenderer(mSecondsOptions, null);
 		updatePaints();
 	}
 
 	public void setTextSize(int size) {
 		mHourMinOptions.textSize = size;
-		if (showSeconds) {
-			mSecondsOptions.textSize = size / 2;
-		}
+		mSecondsOptions.textSize = size / 2;
 		regenerateRenderers();
 	}
 
@@ -123,8 +146,18 @@ public class FormClockView extends View {
 		regenerateRenderers();
 	}
 
+	public void setShowDate(boolean b) {
+		this.showDate = b;
+		regenerateRenderers();
+	}
+
+	public void setShowAlarm(boolean b) {
+		this.showAlarm = b;
+		regenerateRenderers();
+	}
+
 	private void updatePaints() {
-		FormClockRenderer.ClockPaints paints = new FormClockRenderer.ClockPaints();
+		paints = new FormClockRenderer.ClockPaints();
 		Paint paint = new Paint();
 		paint.setAntiAlias(true);
 
@@ -139,10 +172,23 @@ public class FormClockView extends View {
 		paint.setColor(mColor3);
 		paints.fills[2] = paint;
 
+		paint = new Paint();
+		paint.setTypeface(Typeface.createFromAsset(getResources().getAssets(), "Roboto-Regular.ttf"));
+		paint.setTextSize(dateSize);
+		paint.setColor(mColor3);
+		paints.date = paint;
+
+		paint = new Paint();
+		paint.setStyle(Paint.Style.STROKE);
+		paint.setStrokeWidth(40);
+		paint.setColor(Color.BLACK);
+		paint.setAlpha(100);
+		paints.shadow = paint;
+		paints.hasShadow = false;
+
 		mHourMinRenderer.setPaints(paints);
-		if (showSeconds) {
-			mSecondsRenderer.setPaints(paints);
-		}
+		mSecondsRenderer.setPaints(paints);
+
 		invalidate();
 	}
 
@@ -160,16 +206,27 @@ public class FormClockView extends View {
 		mHeight = h;
 	}
 
-	public void updateTime() {
-		/*mHourMinRenderer.updateTime();
-		if (showSeconds) {
-			mSecondsRenderer.updateTime();
-		}*/
+	private String updateDateStr() {
+		dateStr = DateFormat.format(dateFormat, Calendar.getInstance()).toString().toUpperCase();
+		if (dateStr == null) {
+			dateStr = "";
+		}
+		return dateStr;
 	}
 
 	@Override
 	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
+
+		dateStr = updateDateStr();
+		alarmStr = alarm.getAsString();
+
+		float complicationSize = mHourMinOptions.textSize / 5;
+		if (!isPreview) {
+			if (showDate || (showAlarm && !alarmStr.equals(""))) {
+				canvas.translate(0, -(complicationSize / 2) - (mHourMinOptions.charSpacing / 3));
+			}
+		}
 
 		mHourMinRenderer.updateTime();
 		PointF hourMinSize = mHourMinRenderer.measure();
@@ -203,6 +260,50 @@ public class FormClockView extends View {
 				postInvalidateOnAnimation();
 			} else {
 				postInvalidateDelayed(timeToNextHourMinAnimation);
+			}
+		}
+
+		// Draw complications
+		Paint paint = paints.date;
+		paint.setTextSize(complicationSize);
+
+		float x;
+		float y = (this.getBottom() + hourMinSize.y) / 2 + clockSecondsSpacing - paint.ascent();
+
+		if (showDate && showAlarm && alarmStr != null && !alarmStr.equals("")) {
+			float totalStringLength = paint.measureText(dateStr + "  " + alarmStr + complicationSize);
+
+			x = ((mWidth - totalStringLength) / 2);
+			canvas.drawText(dateStr, x, y, paint);
+
+			x += paint.measureText(dateStr + "   ") + complicationSize;
+			alarm.setColor(mColor3);
+			alarm.draw(canvas, x - (complicationSize / 1.5f),
+					y - (complicationSize / 3), complicationSize);
+			canvas.drawText(alarmStr, x, y, paint);
+		}
+		else if (showDate) {
+			x = (mWidth - paint.measureText(dateStr)) / 2;
+			canvas.drawText(
+					dateStr,
+					x,
+					y,
+					paint);
+		}
+		else if (showAlarm) {
+			if (alarmStr != null && !alarmStr.equals("")) {
+				x = ((mWidth - paint.measureText(alarmStr)) / 2) + complicationSize;
+				alarm.setColor(mColor3);
+				alarm.draw(
+						canvas,
+						x - (complicationSize / 1.5f),
+						y - (complicationSize / 3),
+						complicationSize);
+				canvas.drawText(
+						alarmStr,
+						x,
+						y,
+						paint);
 			}
 		}
 	}
@@ -240,4 +341,126 @@ public class FormClockView extends View {
 			regenerateRenderers();
 		}
 	};
+
+	/**
+	 * Added by Michael Beaton on 8 June 2015
+	 * AlarmContainer helps get the next alarm, correctly format it as a string
+	 * and draw a simple icon
+	 */
+	private class AlarmContainer {
+		private int hour = 3;
+		private int minute = 0;
+		private String asString = "";
+
+		Paint paint;
+
+		public AlarmContainer() {
+			update();
+			initPaint();
+		}
+
+		private void initPaint() {
+			paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+			paint.setStyle(Paint.Style.STROKE);
+		}
+
+		public void setColor(int color) {
+			paint.setColor(color);
+		}
+
+		public String getAsString() {
+			update();
+			if (asString == null) {
+				asString = "";
+			}
+			return asString;
+		}
+
+		@SuppressWarnings({"NewApi", "Deprecated"})
+		public void update() {
+			if (Utils.isLollipop()) {
+				AlarmManager am = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
+				AlarmManager.AlarmClockInfo info = am.getNextAlarmClock();
+
+				if (info != null) {
+					Calendar time = Calendar.getInstance();
+					String now = "" + time.get(Calendar.DAY_OF_MONTH) + time.get(Calendar.MONTH) + time.get(Calendar.YEAR);
+					time.setTimeInMillis(info.getTriggerTime());
+					String alarmTime = "" + time.get(Calendar.DAY_OF_MONTH) + time.get(Calendar.MONTH) + time.get(Calendar.YEAR);
+
+					boolean isToday = now.equals(alarmTime);
+
+					if (isToday) {
+						alarmFormat = mHourMinOptions.is24hour ? "H:mm" : "K:mm";
+					} else {
+						alarmFormat = mHourMinOptions.is24hour ? "EEEE H:mm" : "EEEE K:mm";
+					}
+
+					asString = DateFormat.format(alarmFormat, time).toString().toUpperCase();
+					hour = time.get(Calendar.HOUR);
+					minute = time.get(Calendar.MINUTE);
+				}
+				else {
+					asString = "";
+				}
+			}
+			else {
+				asString = Settings.System.getString(getContext().getContentResolver(), Settings.System.NEXT_ALARM_FORMATTED);
+			}
+		}
+
+		public void draw(Canvas c, float x, float y, float size) {
+			float radius = size / 2 * 0.8f;
+			float hourRadius = radius * 0.4f;
+			float minRadius = radius * 0.8f;
+
+			paint.setStrokeWidth(radius / 6);
+
+			// body
+			c.drawCircle(x, y, radius, paint);
+
+			// bells
+			PointF center = new PointF(x, y);
+			PointF point = new PointF(x, y - (size / 2));
+			PointF start = rotateAround(point, center, 25);
+			PointF end = rotateAround(point, center, 55);
+
+			c.drawLine(start.x, start.y, end.x, end.y, paint);
+
+			start = rotateAround(point, center, -25);
+			end = rotateAround(point, center, -55);
+
+			c.drawLine(start.x, start.y, end.x, end.y, paint);
+
+
+			paint.setStrokeWidth(radius / 8);
+
+			// minute hand
+			float endX = (float) (x + minRadius * Math.sin(2 * Math.PI * minute / 60));
+			float endY = (float) (y - minRadius * Math.cos(2 * Math.PI * minute / 60));
+
+			c.drawLine(x, y, endX, endY, paint);
+
+			// hour hand
+			endX = (float) (x + hourRadius * Math.sin(2 * Math.PI * getTotalSeconds() / 43200));
+			endY = (float) (y - hourRadius * Math.cos(2 * Math.PI * getTotalSeconds() / 43200));
+
+			c.drawLine(x, y, endX, endY, paint);
+		}
+
+		// get number of seconds from noon/midnight to alarm time
+		private int getTotalSeconds() {
+			return (hour * 60 * 60) + (minute * 60);
+		}
+
+		private PointF rotateAround(PointF point, PointF center, float angle) {
+			float cos = (float) Math.cos(Math.toRadians(angle));
+			float sin = (float) Math.sin(Math.toRadians(angle));
+
+			float x = (center.x + cos * (point.x - center.x)) - (sin * (point.y - center.y));
+			float y = (center.y + sin * (point.x - center.x)) + (cos * (point.y - center.y));
+
+			return new PointF(x, y);
+		}
+	}
 }

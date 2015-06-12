@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="button_color_background_size">98dp</dimen>
+    <dimen name="button_color_size">96dp</dimen>
+    <dimen name="color_patch_size">48dp</dimen>
+</resources>

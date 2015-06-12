@@ -3,4 +3,13 @@
     <dimen name="header_height">220dp</dimen>
     <dimen name="large_header_height">300dp</dimen>
     <dimen name="preview_text_size">64sp</dimen>
+
+    <dimen name="seconds_clock_height">16sp</dimen>
+    <dimen name="seconds_clock_spacing">3dp</dimen>
+
+    <dimen name="button_color_background_size">74dp</dimen>
+    <dimen name="button_color_size">72dp</dimen>
+    <dimen name="color_patch_size">36dp</dimen>
+
+    <dimen name="expanded_tab_height">64dp</dimen>
 </resources>

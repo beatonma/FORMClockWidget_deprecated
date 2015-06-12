@@ -5,8 +5,8 @@
     android:layout_margin="8dp">
 
     <com.beatonma.colorpicker.PatchView
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="@dimen/color_patch_size"
+        android:layout_height="@dimen/color_patch_size"
         android:id="@+id/patch" />
 
 </FrameLayout>

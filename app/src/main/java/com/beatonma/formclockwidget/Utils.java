@@ -2,7 +2,6 @@ package com.beatonma.formclockwidget;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.app.WallpaperManager;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
@@ -14,6 +13,12 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.RippleDrawable;
 import android.graphics.drawable.StateListDrawable;
+import android.opengl.EGL14;
+import android.opengl.EGLConfig;
+import android.opengl.EGLContext;
+import android.opengl.EGLDisplay;
+import android.opengl.EGLSurface;
+import android.opengl.GLES10;
 import android.os.Build;
 import android.support.v7.graphics.Palette;
 import android.util.DisplayMetrics;
@@ -22,12 +27,17 @@ import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.view.animation.AccelerateDecelerateInterpolator;
 
+import java.util.List;
+
 /**
  * Created by Michael on 28/05/2015.
  */
 public class Utils {
 	private final static String TAG = "Utils";
 
+
+	// Used for circular reveal/hide methods to easily start animation from a certain side
+	// or corner if two of these are used
 	public final static int CIRCULAR_LEFT = 0;
 	public final static int CIRCULAR_TOP = 1;
 	public final static int CIRCULAR_RIGHT = 2;
@@ -41,15 +51,55 @@ public class Utils {
 		return Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
 	}
 
-	public static Palette getWallpaperPalette(Context context) {
-		Bitmap bitmap = getWallpaperBitmap(context);
-		return Palette.generate(bitmap);
-	}
+	public static int getMaxTextureSize() {
+		int maxTextureSize = 0;
 
-	public static Bitmap getWallpaperBitmap(Context context) {
-		WallpaperManager wallpaperManager = WallpaperManager.getInstance(context);
-		Drawable drawable = wallpaperManager.getDrawable();
-		return drawableToBitmap(drawable);
+		EGLDisplay dpy = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY);
+		int[] vers = new int[2];
+		EGL14.eglInitialize(dpy, vers, 0, vers, 1);
+
+		int[] configAttr = {
+				EGL14.EGL_COLOR_BUFFER_TYPE, EGL14.EGL_RGB_BUFFER,
+				EGL14.EGL_LEVEL, 0,
+				EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
+				EGL14.EGL_SURFACE_TYPE, EGL14.EGL_PBUFFER_BIT,
+				EGL14.EGL_NONE
+		};
+		EGLConfig[] configs = new EGLConfig[1];
+		int[] numConfig = new int[1];
+		EGL14.eglChooseConfig(dpy, configAttr, 0,
+				configs, 0, 1, numConfig, 0);
+		if (numConfig[0] == 0) {
+			// TROUBLE! No config found.
+		}
+		EGLConfig config = configs[0];
+
+		int[] surfAttr = {
+				EGL14.EGL_WIDTH, 64,
+				EGL14.EGL_HEIGHT, 64,
+				EGL14.EGL_NONE
+		};
+		EGLSurface surf = EGL14.eglCreatePbufferSurface(dpy, config, surfAttr, 0);
+
+		int[] ctxAttrib = {
+				EGL14.EGL_CONTEXT_CLIENT_VERSION, 2,
+				EGL14.EGL_NONE
+		};
+		EGLContext ctx = EGL14.eglCreateContext(dpy, config, EGL14.EGL_NO_CONTEXT, ctxAttrib, 0);
+
+		EGL14.eglMakeCurrent(dpy, surf, surf, ctx);
+
+		int[] maxSize = new int[1];
+		GLES10.glGetIntegerv(GLES10.GL_MAX_TEXTURE_SIZE, maxSize, 0);
+		maxTextureSize = maxSize[0];
+
+		EGL14.eglMakeCurrent(dpy, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE,
+				EGL14.EGL_NO_CONTEXT);
+		EGL14.eglDestroySurface(dpy, surf);
+		EGL14.eglDestroyContext(dpy, ctx);
+		EGL14.eglTerminate(dpy);
+
+		return maxTextureSize;
 	}
 
 	public static Bitmap drawableToBitmap (Drawable drawable) {
@@ -71,13 +121,8 @@ public class Utils {
 		return px;
 	}
 
-	public static int getScreenWidthPx(Context context) {
-		DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-		int px = displayMetrics.widthPixels;
-		return px;
-	}
-
-	public static void setBackground(View v, int color, int highlight) { // generate ripple drawable and set as view background
+	// generate ripple drawable and set as view background
+	public static void setBackground(View v, int color, int highlight) {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 			int[][] states = new int[][]{
 					new int[]{android.R.attr.state_enabled},
@@ -123,14 +168,11 @@ public class Utils {
 	public static void createCircularReveal(View v, int cx, int cy) {
 		try {
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-				// get the final radius for the clipping circle
 				int finalRadius = Math.max(v.getWidth(), v.getHeight());
 
-				// create the animator for this view (the start radius is zero)
 				Animator anim = ViewAnimationUtils.createCircularReveal(v, cx, cy, 0, finalRadius);
 				anim.setInterpolator(new AccelerateDecelerateInterpolator());
 
-				// make the view visible and start the animation
 				v.setVisibility(View.VISIBLE);
 				anim.start();
 			}
@@ -257,59 +299,15 @@ public class Utils {
 		return point;
 	}
 
-	public static int getThemeKeyFromWallpaper(Context context) {
-		Palette p = getWallpaperPalette(context);
-		int color = p.getVibrantColor(context.getResources().getColor(R.color.Accent));
-		return whatColor(color);
-	}
+	public static String[] paletteToStringArray(Palette palette) {
+		List<Palette.Swatch> swatches = palette.getSwatches();
+		String[] output = new String[swatches.size()];
 
-	public static int whatColor(int color) {
-		float[] hsv = new float[3];
-		int result;
-
-		Color.colorToHSV(color, hsv);
-
-		if (hsv[1] == 0) {
-			// GREY
-			result = 1;
-		}
-		else {
-			float hue = hsv[0];
-
-			if (hue <= 14f) {
-				// RED
-				result = 2;
-			}
-			else if (hue <= 33f) {
-				// ORANGE
-				result = 3;
-			}
-			else if (hue <= 70f) {
-				// YELLOW
-				result = 4;
-			}
-			else if (hue <= 180) {
-				// GREEN
-				result = 5;
-			}
-			else if (hue <= 260f) {
-				// BLUE
-				result = 6;
-			}
-			else if (hue <= 300f) {
-				// PURPLE
-				result = 7;
-			}
-			else if (hue <= 360f) {
-				// PINK
-				result = 8;
-			}
-			else {
-				// who knows?
-				result = 0;
-			}
+		int i = 0;
+		for (Palette.Swatch swatch : swatches) {
+			output[i] = String.format("#%06X", 0xFFFFFF & swatch.getRgb());
 		}
 
-		return result;
+		return output;
 	}
 }

@@ -350,6 +350,11 @@ public class ColorPreference extends Preference {
         }
 
         @Override
+        public void onRequestDisallowInterceptTouchEvent(boolean b) {
+
+        }
+
+        @Override
         public void onTouchEvent(RecyclerView view, MotionEvent motionEvent) { }
 
         private void modeSingleColor(int position) {

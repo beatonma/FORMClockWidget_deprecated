@@ -15,29 +15,18 @@
         android:scaleType="centerCrop"
         android:contentDescription="@string/preview_description"/>
 
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/Overlay"
-        android:id="@+id/header_overlay"
-        android:elevation="6dp"
-        android:clickable="true"/>
-
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="@dimen/large_header_height"
         android:id="@+id/header_view">
 
-        <!--<ProgressBar
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_alignParentTop="true"
-            android:id="@+id/image_loading_progress_bar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:indeterminate="true"
-            android:layout_marginTop="-8dp"
-            android:padding="0dp"
-            android:elevation="8dp"/>-->
+            android:layout_height="match_parent"
+            android:background="@color/Overlay"
+            android:id="@+id/header_overlay"
+            android:elevation="6dp"
+            android:clickable="true"/>
 
         <RelativeLayout
             android:layout_width="match_parent"
@@ -102,52 +91,42 @@
             android:elevation="1dp"
             android:clipToPadding="false">
 
-            <FrameLayout
-                android:layout_width="@dimen/button_color_background_size"
-                android:layout_height="@dimen/button_color_background_size"
-                android:layout_margin="4dp"
-                android:background="@color/Primary">
-                <ImageButton
-                    android:layout_width="@dimen/button_color_size"
-                    android:layout_height="@dimen/button_color_size"
-                    android:layout_gravity="center"
-                    android:id="@+id/button_color1"
-                    android:elevation="4dp"
-                    android:stateListAnimator="@anim/raise"/>
-            </FrameLayout>
+            <ImageButton
+                android:layout_width="@dimen/button_color_size"
+                android:layout_height="@dimen/button_color_size"
+                android:layout_margin="8dp"
+                android:id="@+id/button_color1"
+                android:elevation="4dp"
+                android:stateListAnimator="@anim/raise"/>
 
-            <FrameLayout
-                android:layout_width="@dimen/button_color_background_size"
-                android:layout_height="@dimen/button_color_background_size"
-                android:layout_margin="4dp"
-                android:background="@color/Primary">
-                <ImageButton
-                    android:layout_width="@dimen/button_color_size"
-                    android:layout_height="@dimen/button_color_size"
-                    android:layout_gravity="center"
-                    android:id="@+id/button_color2"
-                    android:elevation="4dp"
-                    android:stateListAnimator="@anim/raise"/>
-            </FrameLayout>
+            <ImageButton
+                android:layout_width="@dimen/button_color_size"
+                android:layout_height="@dimen/button_color_size"
+                android:layout_margin="8dp"
+                android:id="@+id/button_color2"
+                android:elevation="4dp"
+                android:stateListAnimator="@anim/raise"/>
 
-            <FrameLayout
-                android:layout_width="@dimen/button_color_background_size"
-                android:layout_height="@dimen/button_color_background_size"
-                android:layout_margin="4dp"
-                android:background="@color/Primary">
-                <ImageButton
-                    android:layout_width="@dimen/button_color_size"
-                    android:layout_height="@dimen/button_color_size"
-                    android:layout_gravity="center"
-                    android:id="@+id/button_color3"
-                    android:elevation="4dp"
-                    android:stateListAnimator="@anim/raise"/>
-            </FrameLayout>
+            <ImageButton
+                android:layout_width="@dimen/button_color_size"
+                android:layout_height="@dimen/button_color_size"
+                android:layout_margin="8dp"
+                android:id="@+id/button_color3"
+                android:elevation="4dp"
+                android:stateListAnimator="@anim/raise"/>
         </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/expanded_tab_height"
+            android:id="@+id/tablayout_padding"
+            android:elevation="4dp"
+            android:clickable="true"/>
 
         <com.google.samples.apps.iosched.ui.widget.SlidingTabLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_below="@+id/tablayout_padding"
             android:id="@+id/tablayout"
             android:elevation="4dp"/>
 
@@ -157,16 +136,4 @@
             android:layout_below="@+id/tablayout"
             android:id="@+id/viewpager" />
     </RelativeLayout>
-
-    <!--<FrameLayout-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="match_parent"-->
-        <!--android:layout_marginTop="@dimen/header_height"-->
-        <!--android:layout_marginStart="96dp"-->
-        <!--android:layout_marginEnd="96dp"-->
-        <!--android:layout_marginBottom="24dp"-->
-        <!--android:elevation="8dp"-->
-        <!--android:background="@color/White"-->
-        <!--android:id="@+id/fragment_container"-->
-        <!--android:clipToPadding="false"/>-->
 </RelativeLayout>

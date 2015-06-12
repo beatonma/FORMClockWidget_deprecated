@@ -13,13 +13,11 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.v7.graphics.Palette;
 import android.util.Log;
 import android.widget.RemoteViews;
 
 import com.beatonma.colorpicker.ColorUtils;
 
-import net.nurik.roman.formwatchface.common.FormClockRenderer;
 import net.nurik.roman.formwatchface.common.FormClockView;
 
 import java.util.Calendar;
@@ -32,102 +30,149 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 	final static String UPDATE = "com.beatonma.formclockwidget.UPDATE";
 	final static String ANIMATE = "com.beatonma.formclockwidget.ANIMATE";
 	final static String FINISHED = "com.beatonma.formclockwidget.FINISHED";
-	final static long UPDATE_INTERVAL = 60000l;
+	final static String COLOR_UPDATE = "com.beatonma.formclockwidget.COLOR_UPDATE";
+	final static String EXTERNAL_LWP = "com.beatonma.formclockwidget.EXTERNAL_LWP";
+	final static int INVALID_COLOR = 1234567890;
 
-	int widgetWidth = 1000;
-	int widgetHeight = 333;
+	private final static int WIDGET_WIDTH = 1000;
+	private final static int WIDGET_HEIGHT = 500;
 
 	public final static int ANIMATION_START_SECOND = 58;
 	public final static int ANIMATION_STOP_SECOND = 1;
 
-	int textSize = 226;
+	private int textSize = 210;
 
-	Context context;
-	SharedPreferences preferences;
-	private FormClockView clockView;
+	//	Context context;
+	private SharedPreferences preferences;
 
-	Intent animationService;
+	private Intent animationService;
 
 	// User preferences
-	boolean useWallpaperPalette = false;
-	boolean enableAnimation = false;
-	int color1 = Color.WHITE;
-	int color2 = Color.GRAY;
-	int color3 = Color.BLACK;
+	private boolean useWallpaperPalette = false;
+	private boolean enableAnimation = false;
+	private boolean showDate = false;
+	private boolean showAlarm = false;
+	private int color1 = Color.WHITE;
+	private int color2 = Color.GRAY;
+	private int color3 = Color.BLACK;
 
 	@Override
 	public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-		this.context = context;
-		updateWidgets(appWidgetManager, appWidgetIds);
+		updateWidgets(context);
+		scheduleUpdate(context);
 	}
 
 	@Override
 	public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
 		super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
-
-		widgetWidth = Utils.dpToPx(context, newOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH));
-		widgetHeight = widgetWidth / 2;
-
-		textSize = widgetHeight;
-
-		FormClockRenderer.Options options = new FormClockRenderer.Options();
-		FormClockRenderer renderer = new FormClockRenderer(options);
-
-		textSize = renderer.getMaxTextSize(context, widgetWidth);
+		loadSharedPreferences(context);
+		scheduleUpdate(context);
 	}
 
-	public void updateWidgets(AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-		for (int appWidgetId : appWidgetIds) {
-			updateWidget(context, appWidgetManager, appWidgetId);
+	private void updateWidgets(Context context) {
+		loadSharedPreferences(context);
+
+		if (useWallpaperPalette) {
+			long timeSinceColorUpdate = System.currentTimeMillis() - preferences.getLong(PrefUtils.WALLPAPER_COLORS_UPDATED, 10000l);
+
+			// Don't update colors if we have already done so in last 5 seconds
+			if (timeSinceColorUpdate < 5000l) {
+				color1 = preferences.getInt(PrefUtils.WALLPAPER_COLOR1, Color.BLACK);
+				color2 = preferences.getInt(PrefUtils.WALLPAPER_COLOR2, Color.GRAY);
+				color3 = preferences.getInt(PrefUtils.WALLPAPER_COLOR3, Color.WHITE);
+
+				updateWidgets(context, color1, color2, color3);
+			}
+			else {
+				Log.d(TAG, "refreshing wallpaper colors");
+				preferences.edit()
+						.putLong(PrefUtils.WALLPAPER_COLORS_UPDATED, System.currentTimeMillis())
+						.commit();
+				setClockColorsToWallpaper(context);
+			}
+		}
+		else {
+			color1 = ColorUtils.getColorFromPreference(preferences, PrefUtils.PREF_COLOR1, Color.WHITE);
+			color2 = ColorUtils.getColorFromPreference(preferences, PrefUtils.PREF_COLOR2, Color.GRAY);
+			color3 = ColorUtils.getColorFromPreference(preferences, PrefUtils.PREF_COLOR3, Color.BLACK);
+
+			updateWidgets(context, color1, color2, color3);
 		}
 	}
 
-	public void updateWidgets() {
+	private void updateWidgets(Context context, int color1, int color2, int color3) {
 		ComponentName appWidget = new ComponentName(context.getPackageName(), getClass().getName());
 		AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
 		int ids[] = appWidgetManager.getAppWidgetIds(appWidget);
-		updateWidgets(appWidgetManager, ids);
+
+		FormClockView formClockView = initClockView(context, color1, color2, color3);
+		Bitmap bitmap = formClockView.getDrawingCache();
+		updateWidgets(context, appWidgetManager, ids, bitmap);
 	}
 
-	public void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
-		if (clockView == null) {
-			loadSharedPreferences();
-			initClockViews();
+	private void updateWidgets(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds, Bitmap bitmap) {
+		for (int appWidgetId : appWidgetIds) {
+			RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_layout);
+			views.setImageViewBitmap(R.id.clock_view, bitmap);
+			views.setOnClickPendingIntent(R.id.clock_view, getOnClickIntent(context));
+			appWidgetManager.updateAppWidget(appWidgetId, views);
 		}
 
-		Bitmap bitmap = clockView.getDrawingCache();
-
-		RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_layout);
-		views.setImageViewBitmap(R.id.clock_view, bitmap);
-		views.setOnClickPendingIntent(R.id.container, getUpdateIntent(context));
-		appWidgetManager.updateAppWidget(appWidgetId, views);
+		bitmap.recycle();
 	}
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
 		super.onReceive(context, intent);
-		this.context = context;
 
-		loadSharedPreferences();
+		loadSharedPreferences(context);
 
 		switch (intent.getAction()) {
 			case AppWidgetManager.ACTION_APPWIDGET_UPDATE:
+				scheduleUpdate(context);
 				animationService = new Intent(context, WidgetAnimationService.class);
 				context.startService(animationService);
 				break;
 
 			case UPDATE:
+				scheduleUpdate(context);
 				animationService = new Intent(context, WidgetAnimationService.class);
 				context.startService(animationService);
 				break;
 
 			case ANIMATE:
-				updateWidgets();
+				updateWidgets(context);
 				break;
 
 			case FINISHED:
 				Log.d(TAG, "Update finished - scheduling next update");
-				scheduleUpdate();
+				scheduleUpdate(context);
+				break;
+
+			case COLOR_UPDATE:
+				updateClockColorsFromIntent(context, intent);
+				break;
+
+			case EXTERNAL_LWP:
+				Log.d(TAG, "Intent received from external LWP");
+				Bundle extras = intent.getExtras();
+				if (extras != null) {
+					String packageName = extras.getString("lwp_package", "");
+					int color1 = extras.getInt("lwp_color1", INVALID_COLOR);
+					int color2 = extras.getInt("lwp_color2", INVALID_COLOR);
+					int color3 = extras.getInt("lwp_color3", INVALID_COLOR);
+
+					if (packageName.equals("") || color1 == INVALID_COLOR
+							|| color2 == INVALID_COLOR || color3 == INVALID_COLOR) {
+						return;
+					}
+					else {
+						Log.d(TAG, "Registering package: " + packageName + ";" + color1 + ";" + color2 + ";" + color3);
+						WallpaperUtils.registerPackage(context, packageName, color1, color2, color3);
+
+						updateWidgets(context);
+					}
+				}
 				break;
 		}
 	}
@@ -135,28 +180,25 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 	@Override
 	public void onRestored(Context context, int[] oldWidgetIds, int[] newWidgetIds) {
 		super.onRestored(context, oldWidgetIds, newWidgetIds);
-		this.context = context;
 
-		scheduleUpdate();
+		scheduleUpdate(context);
 	}
 
 	@Override
 	public void onEnabled(Context context) {
 		super.onEnabled(context);
-		this.context = context;
 
-		preferences = context.getSharedPreferences(ConfigActivity.PREFS, Activity.MODE_PRIVATE);
+		preferences = context.getSharedPreferences(PrefUtils.PREFS, Activity.MODE_PRIVATE);
 		preferences.registerOnSharedPreferenceChangeListener(this);
 
-		scheduleUpdate();
+		scheduleUpdate(context);
 	}
 
 	@Override
 	public void onDisabled(Context context) {
 		super.onDisabled(context);
-		this.context = context;
 
-		preferences = context.getSharedPreferences(ConfigActivity.PREFS, Activity.MODE_PRIVATE);
+		preferences = context.getSharedPreferences(PrefUtils.PREFS, Activity.MODE_PRIVATE);
 		preferences.unregisterOnSharedPreferenceChangeListener(this);
 
 		AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
@@ -169,7 +211,6 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 	@Override
 	public void onDeleted(Context context, int[] appWidgetIds) {
 		super.onDeleted(context, appWidgetIds);
-		this.context = context;
 
 		animationService = new Intent(context, WidgetAnimationService.class);
 		context.stopService(animationService);
@@ -177,35 +218,33 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 
 	@Override
 	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-		loadSharedPreferences();
-		initClockViews();
+		loadSharedPreferences(sharedPreferences);
 	}
 
-	public void loadSharedPreferences() {
+	private void loadSharedPreferences(SharedPreferences preferences) {
+		this.preferences = preferences;
+		useWallpaperPalette = preferences.getBoolean(PrefUtils.PREF_USE_WALLPAPER_PALETTE, false);
+		enableAnimation = preferences.getBoolean(PrefUtils.PREF_ENABLE_ANIMATION, false);
+		showDate = preferences.getBoolean(PrefUtils.PREF_SHOW_DATE, false);
+		showAlarm = preferences.getBoolean(PrefUtils.PREF_SHOW_ALARM, false);
+
+		color1 = ColorUtils.getColorFromPreference(preferences, PrefUtils.PREF_COLOR1, Color.WHITE);
+		color2 = ColorUtils.getColorFromPreference(preferences, PrefUtils.PREF_COLOR2, Color.GRAY);
+		color3 = ColorUtils.getColorFromPreference(preferences, PrefUtils.PREF_COLOR3, Color.BLACK);
+	}
+
+	private void loadSharedPreferences(Context context) {
 		if (context != null) {
-			preferences = context.getSharedPreferences(ConfigActivity.PREFS, Activity.MODE_PRIVATE);
-			useWallpaperPalette = preferences.getBoolean("pref_use_wallpaper_palette", false);
-			enableAnimation = preferences.getBoolean("pref_enable_animation", false);
-			color1 = ColorUtils.getColorFromPreference(preferences, "pref_color1", Color.WHITE);
-			color2 = ColorUtils.getColorFromPreference(preferences, "pref_color2", Color.GRAY);
-			color3 = ColorUtils.getColorFromPreference(preferences, "pref_color3", Color.BLACK);
+			preferences = context.getSharedPreferences(PrefUtils.PREFS, Activity.MODE_PRIVATE);
+			loadSharedPreferences(preferences);
 		}
 		else {
 			Log.d(TAG, "Loading prefs failed: context is null");
 		}
 	}
 
-	public void initClockViews() {
-		if (useWallpaperPalette) {
-			initClockView(context);
-		}
-		else {
-			initClockView(context, color1, color2, color3);
-		}
-	}
-
 	@SuppressLint("NewApi")
-	public void scheduleUpdate() {
+	public void scheduleUpdate(Context context) {
 		Calendar time = Calendar.getInstance();
 		AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 
@@ -227,42 +266,81 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 		}
 	}
 
-	private void initClockView(Context context) {
-		clockView = new FormClockView(context);
-		clockView.setTextSize(textSize);
-		clockView.setColors(Color.WHITE, Color.GRAY, Color.BLACK);
-		clockView.setDrawingCacheEnabled(true);
-		clockView.measure(widgetWidth, widgetHeight);
-		clockView.layout(0, 0, widgetWidth, widgetHeight);
+	private FormClockView initClockView(Context context, int color1, int color2, int color3) {
+		loadSharedPreferences(context);
 
-		if (useWallpaperPalette) {
-			setClockColorsToWallpaper(context);
-		}
-	}
-
-	private void initClockView(Context context, int color1, int color2, int color3) {
-		clockView = new FormClockView(context);
+		FormClockView clockView = new FormClockView(context);
 		clockView.setTextSize(textSize);
+		clockView.setShowDate(showDate);
+		clockView.setShowAlarm(showAlarm);
 		clockView.setColors(color1, color2, color3);
 		clockView.setDrawingCacheEnabled(true);
-		clockView.measure(widgetWidth, widgetHeight);
-		clockView.layout(0, 0, widgetWidth, widgetHeight);
+		clockView.measure(WIDGET_WIDTH, WIDGET_HEIGHT);
+		clockView.layout(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT);
+		return clockView;
 	}
 
-	private void setClockColorsToWallpaper(final Context context) {
-		Palette palette = Utils.getWallpaperPalette(context);
+	private void setClockColorsToWallpaper(Context context) {
+		Intent colorService = new Intent(context, WidgetColorService.class);
+		context.startService(colorService);
+	}
 
-		int color1, color2, color3;
-		color1 = palette.getVibrantColor(Color.WHITE);
-		color2 = palette.getLightVibrantColor(Color.GRAY);
-		color3 = palette.getDarkVibrantColor(Color.BLACK);
+	private void updateClockColorsFromIntent(Context context, Intent intent) {
+		int color1 = intent.getIntExtra("color1", Color.WHITE);
+		int color2 = intent.getIntExtra("color2", Color.GRAY);
+		int color3 = intent.getIntExtra("color3", Color.BLACK);
 
-		initClockView(context, color1, color2, color3);
+		loadSharedPreferences(context);
+		preferences.edit()
+				.putLong(PrefUtils.WALLPAPER_COLORS_UPDATED, System.currentTimeMillis())
+				.putInt(PrefUtils.WALLPAPER_COLOR1, color1)
+				.putInt(PrefUtils.WALLPAPER_COLOR2, color2)
+				.putInt(PrefUtils.WALLPAPER_COLOR3, color3)
+				.commit();
+
+
+		updateWidgets(context, color1, color2, color3);
 	}
 
 	private PendingIntent getUpdateIntent(Context context) {
 		Intent intent = new Intent(UPDATE);
 		PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+		return pendingIntent;
+	}
+
+	private PendingIntent getOnClickIntent(Context context) {
+		String pkg = preferences.getString(PrefUtils.PREF_ON_TOUCH_PACKAGE, PrefUtils.PREF_ON_TOUCH_DEFAULT_PACKAGE);
+		String activity = preferences.getString(PrefUtils.PREF_ON_TOUCH_LAUNCHER, PrefUtils.PREF_ON_TOUCH_DEFAULT_LAUNCHER);
+
+		ComponentName name = new ComponentName(pkg, activity);
+		Intent intent;
+
+		if (pkg == null) {
+			return null;
+		}
+
+		if (activity == null || activity.equals("null") || activity.equals("")
+				|| !(pkg.equals(PrefUtils.PREF_ON_TOUCH_DEFAULT_PACKAGE) && activity.equals(PrefUtils.PREF_ON_TOUCH_DEFAULT_LAUNCHER))) {
+			intent = context.getPackageManager().getLaunchIntentForPackage(pkg);
+		}
+		else {
+			intent = new Intent(Intent.ACTION_MAIN);
+
+			intent.addCategory(Intent.CATEGORY_LAUNCHER);
+			intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
+					Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+			intent.setComponent(name);
+		}
+
+		if (intent == null) {
+			Log.e(TAG, "Couldn't find activity for package: " + pkg);
+			name = new ComponentName(PrefUtils.PREF_ON_TOUCH_DEFAULT_PACKAGE, PrefUtils.PREF_ON_TOUCH_DEFAULT_LAUNCHER);
+			intent = new Intent(Intent.ACTION_MAIN);
+			intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+			intent.setComponent(name);
+		}
+
+		PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
 		return pendingIntent;
 	}
 }

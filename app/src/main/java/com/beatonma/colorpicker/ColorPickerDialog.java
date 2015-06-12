@@ -16,15 +16,15 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.Button;
 import android.widget.FrameLayout;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
-import com.beatonma.formclockwidget.ConfigActivity;
+import com.beatonma.formclockwidget.PrefUtils;
 import com.beatonma.formclockwidget.R;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -40,6 +40,7 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
 	private final static int MODE_COLOR_SINGLE = 0;
 	private final static int MODE_COLOR_MULTI = 1;
 	private final static int MODE_SWATCH_MULTI = 2;
+	private final static int MODE_CUSTOM_COLORS = 3;
 
 	private final static String ATTR_MODE_COLOR_SINGLE = "color_single";
 	private final static String ATTR_MODE_COLOR_MULTI = "color_multi";
@@ -65,6 +66,8 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
 	private int defaultSwatch = 0;
 	private int defaultColor = 0;
 
+	private String[] customColors = {""};
+
 	// Remember which colours and/or swatches have been selected
 	private ArrayList<ColorContainer> selectedItems;
 
@@ -80,6 +83,15 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
         return d;
     }
 
+	public static ColorPickerDialog newInstance(String key, String[] customColors) {
+		ColorPickerDialog d = new ColorPickerDialog();
+		Bundle args = new Bundle();
+		args.putString("key", key);
+		args.putStringArray("customColors", customColors);
+		d.setArguments(args);
+		return d;
+	}
+
 	@Override
 	public void onCreate(Bundle saved) {
 		super.onCreate(saved);
@@ -88,7 +100,14 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
 		Bundle args = getArguments();
 		if (args != null) {
 			key = args.getString("key", "");
+			customColors = args.getStringArray("customColors");
 		}
+
+		if (customColors != null && customColors.length != 0) {
+			mode = MODE_CUSTOM_COLORS;
+		}
+
+		Log.d(TAG, "Mode = " + mode);
 
 		mDataset = new ArrayList<String>();
 		loadSelectedItems();
@@ -132,6 +151,11 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
 			okButton.setVisibility(View.GONE);
 		}
 
+		if (mode == MODE_CUSTOM_COLORS) {
+			okButton.setVisibility(View.GONE);
+			backButton.setVisibility(View.GONE);
+		}
+
 		recyclerView = (RecyclerView) dialog.findViewById(R.id.recycler_view);
 		initRecycler(recyclerView);
 
@@ -162,6 +186,15 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
 			case MODE_SWATCH_MULTI:
 				updateMultiSwatchSelection();
 				break;
+			case MODE_CUSTOM_COLORS:
+				updateCustomColorsSelection();
+		}
+	}
+
+	private void updateCustomColorsSelection() {
+		if (!selectedItems.isEmpty()) {
+			ColorContainer container = selectedItems.get(0);
+			selectPatchAt(container.swatch);
 		}
 	}
 
@@ -213,7 +246,7 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
 
 
 	private void saveSelectedItems() {
-		SharedPreferences sp = context.getSharedPreferences(ConfigActivity.PREFS, Context.MODE_PRIVATE);
+		SharedPreferences sp = context.getSharedPreferences(PrefUtils.PREFS, Context.MODE_PRIVATE);
 		SharedPreferences.Editor editor = sp.edit();
 		Set<String> set = new HashSet<String>();
 
@@ -231,7 +264,7 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
 
 	private void loadSelectedItems() {
 		selectedItems = new ArrayList<ColorContainer>();
-		SharedPreferences sp = context.getSharedPreferences(ConfigActivity.PREFS, Context.MODE_PRIVATE);
+		SharedPreferences sp = context.getSharedPreferences(PrefUtils.PREFS, Context.MODE_PRIVATE);
 		Set set = sp.getStringSet(key, new HashSet<String>());
 
 		Iterator<String> iterator = set.iterator();
@@ -263,6 +296,9 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
 						case MODE_SWATCH_MULTI:
 							modeMultiSwatch(chosenPatch, position);
 							break;
+						case MODE_CUSTOM_COLORS:
+							modeCustomColor(position);
+							break;
 					}
 				}
 				catch (Exception e) {
@@ -274,7 +310,20 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
 		}
 
 		@Override
+		public void onRequestDisallowInterceptTouchEvent(boolean b) {
+
+		}
+
+		@Override
 		public void onTouchEvent(RecyclerView view, MotionEvent motionEvent) { }
+
+		private void modeCustomColor(int position) {
+			level = VIEW_LEVEL_SWATCHES;
+			selectedItems.add(new ColorContainer(position, -1));
+			saveSelectedItems();
+			listener.onColorPicked(position, -1);
+			dialog.cancel();
+		}
 
 		private void modeSingleColor(int position) {
 			switch (level) {
@@ -349,7 +398,20 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
 		}
 
 		@Override
+		protected void onPreExecute() {
+			mDataset = new ArrayList<String>();
+		}
+
+		@Override
 		protected String doInBackground(Integer... n) {
+			if (mode == MODE_CUSTOM_COLORS) {
+				Collections.addAll(mDataset, customColors);
+				/*for (String s : customColors) {
+					mDataset.add(s);
+				}*/
+				return null;
+			}
+
 			switch (level) {
 				case VIEW_LEVEL_SWATCHES:
 					try {
@@ -387,12 +449,12 @@ public class ColorPickerDialog extends DialogFragment implements OnColorPickedLi
 		}
 
 		@Override
-		protected void onPreExecute() {
-			mDataset = new ArrayList<String>();
-		}
-
-		@Override
 		protected void onPostExecute(String file) {
+			if (mode == MODE_CUSTOM_COLORS) {
+				adapter.animatedUpdateDataset(mDataset, -1);
+				dialog.setTitle(dialogTitle);
+			}
+
 			if (level == VIEW_LEVEL_SWATCHES) {
 				backButton.setVisibility(View.INVISIBLE);
 				adapter.animatedUpdateDataset(mDataset, -1); // TODO change this to adapter.positionInDataset when animation works nicely

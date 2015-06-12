@@ -6,6 +6,7 @@
         <attr name="color1" format="color" />
         <attr name="color2" format="color" />
         <attr name="color3" format="color" />
+        <attr name="isPreview" format="boolean" />
     </declare-styleable>
 	
 	<declare-styleable name="ColorPicker">
