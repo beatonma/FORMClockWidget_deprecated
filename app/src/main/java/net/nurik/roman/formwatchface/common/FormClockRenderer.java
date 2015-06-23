@@ -16,7 +16,6 @@
 
 package net.nurik.roman.formwatchface.common;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -24,9 +23,8 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.RectF;
-import android.util.Log;
 
-import com.beatonma.formclockwidget.Utils;
+import com.beatonma.formclockwidget.PrefUtils;
 
 import java.util.Calendar;
 import java.util.HashMap;
@@ -38,12 +36,16 @@ import static net.nurik.roman.formwatchface.common.MathUtil.interpolate;
 import static net.nurik.roman.formwatchface.common.MathUtil.progress;
 
 public class FormClockRenderer {
+	private static final String TAG = "FormClockRenderer";
 	private static final long DEBUG_TIME_MILLIS = 0; //new Date(2015, 2, 22, 12, 59, 52).getTime();
 	private static final long BOOT_TIME_MILLIS = System.currentTimeMillis();
 
 	private static final String DEBUG_TIME = null;//"0123456789";
 	private static final String DEBUG_GLYPH = null;//"2_3";
 	private static final boolean DEBUG_SHOW_RECTS = false;
+
+	public static final int ORIENTATION_HORIZONTAL = 0;
+	public static final int ORIENTATION_VERTICAL = 1;
 
 	private int[] mAnimatedGlyphIndices = new int[20];
 	private int[] mTempAnimatedGlyphIndices = new int[20];
@@ -52,7 +54,7 @@ public class FormClockRenderer {
 	private int mGlyphCount = 0;
 
 	private Options mOptions;
-	private ClockPaints mPaints;
+	public ClockPaints mPaints;
 	private Font mFont = new Font();
 
 	// for offscreen glyphs
@@ -84,6 +86,7 @@ public class FormClockRenderer {
 		this.mOptions = options;
 		this.mPaints = paints;
 		this.mTempCalendar = Calendar.getInstance();
+
 		updateTime();
 		initOffsGlyphBitmap();
 
@@ -119,18 +122,11 @@ public class FormClockRenderer {
 		mOffsGlyphCanvas = new Canvas(mOffsGlyphBitmap);
 		mOffsGlyphPaint = new Paint();
 		mOffsGlyphPaint.setFilterBitmap(true);
-
-		if (showShadow) {
-			shadowBitmap = Bitmap.createBitmap(
-					mOffsGlyphBitmapUnpaddedSize * 2,
-					mOffsGlyphBitmapUnpaddedSize * 2,
-					Bitmap.Config.ARGB_8888);
-			shadowCanvas = new Canvas(shadowBitmap);
-		}
 	}
 
 	public void setPaints(ClockPaints paints) {
 		mPaints = paints;
+		this.showShadow = paints.hasShadow;
 	}
 
 	public void updateTime() {
@@ -224,6 +220,20 @@ public class FormClockRenderer {
 	}
 
 	private void layoutPass(LayoutPassCallback cb, RectF rectF) {
+		switch (mOptions.orientation) {
+			case ORIENTATION_HORIZONTAL:
+				layoutPassHorizontal(cb, rectF);
+				break;
+			case ORIENTATION_VERTICAL:
+				layoutPassVertical(cb, rectF);
+				break;
+			default:
+				layoutPassHorizontal(cb, rectF);
+				break;
+		}
+	}
+
+	private void layoutPassHorizontal(LayoutPassCallback cb, RectF rectF) {
 		float x = 0;
 
 		for (int i = 0; i < mGlyphCount; i++) {
@@ -240,77 +250,144 @@ public class FormClockRenderer {
 		}
 	}
 
-	/**
-	 * Finds the largest text size that can render 00:00 in a given width.
-	 */
-	public int getMaxTextSize(Context context, int layoutWidth) {
-		float colonWidth = mFont.getGlyph(":").getWidthAtProgress(0);
-		float zeroWidth = mFont.getGlyph("0").getWidthAtProgress(0.5f);
-		int charSpacing = Utils.dpToPx(context, (int) mOptions.charSpacing) * 4;
-		float totalWidth = (zeroWidth * 4)
-				+ colonWidth
-				+ charSpacing;
+	private void layoutPassVertical(LayoutPassCallback cb, RectF rectF) {
+		float x = 0;
+		float y = 0;
 
-		int textSize = (int) (Font.DRAWHEIGHT * layoutWidth / totalWidth);
-		Log.d("", "charspacing: " + charSpacing);
-		Log.d("", "textSize: " + textSize);
+		int charsOnLine = 0;
+		float scale = mOptions.textSize / Font.DRAWHEIGHT;
 
-		return textSize;
+		float topWidth = getNaiveWidth(mGlyphs[0], scale) + getNaiveWidth(mGlyphs[1], scale);
+		float bottomWidth = getNaiveWidth(mGlyphs[3], scale) + getNaiveWidth(mGlyphs[4], scale);
+
+		if (bottomWidth > topWidth) {
+			x = ((bottomWidth - topWidth)) / 2f;
+		}
+
+		for (int i = 0; i < mGlyphCount; i++) {
+			Glyph glyph = mGlyphs[i];
+			if (glyph.getCanonicalStartGlyph().equals(":")) { // replace colon with new line
+				if (topWidth > bottomWidth) {
+					x = ((topWidth - bottomWidth)) / 2f;
+				}
+				else {
+					x = 0;
+				}
+				y = mOptions.textSize + mOptions.charSpacing;
+				charsOnLine = 0;
+			}
+			else {
+				float t = getGlyphAnimProgress(i);
+				float glyphWidth = glyph.getWidthAtProgress(t) * mOptions.textSize / Font.DRAWHEIGHT;
+
+				rectF.set(x, y, x + glyphWidth, y + mOptions.textSize);
+				cb.visitGlyph(glyph, t, rectF);
+
+				x += Math.floor(glyphWidth +
+						(charsOnLine >= 0 ? mOptions.charSpacing : 0));
+				charsOnLine++;
+			}
+		}
+	}
+
+	// Get static width (not accounting for changes made by animation)
+	private float getNaiveWidth(Glyph glyph, float scale) {
+		float width = glyph.getWidthAtProgress(0) * scale;
+		return width;
 	}
 
 	public void draw(final Canvas canvas, float left, float top, final boolean offscreenGlyphs) {
-		mFont.canvas = offscreenGlyphs ? mOffsGlyphCanvas : canvas;
+		Bitmap tempBitmap = null;
+		Canvas tempCanvas = null;
+		Canvas canvasArray[];
 
-		int sc = canvas.save();
-		canvas.translate(left, top);
+		if (showShadow) {
+			shadowBitmap = Bitmap.createBitmap(
+					canvas.getWidth(),
+					canvas.getHeight(),
+					Bitmap.Config.ARGB_8888);
+			shadowCanvas = new Canvas(shadowBitmap);
 
-		layoutPass(new LayoutPassCallback() {
-			@Override
-			public void visitGlyph(Glyph glyph, float glyphAnimProgress, RectF rect) {
-				int sc;
+			tempBitmap = Bitmap.createBitmap(
+					canvas.getWidth(),
+					canvas.getHeight(),
+					Bitmap.Config.ARGB_8888);
+			tempCanvas = new Canvas(tempBitmap);
 
-				if (glyphAnimProgress == 0) {
-					glyph = mFont.mGlyphMap.get(glyph.getCanonicalStartGlyph());
-				} else if (glyphAnimProgress == 1) {
-					glyph = mFont.mGlyphMap.get(glyph.getCanonicalEndGlyph());
-					glyphAnimProgress = 0;
+			canvasArray = new Canvas[] { shadowCanvas, tempCanvas };
+		}
+		else {
+			canvasArray = new Canvas[] { canvas };
+		}
+
+		for (final Canvas c : canvasArray) {
+			mFont.canvas = c;
+			int sc = c.save();
+			c.translate(left, top);
+
+			layoutPass(new LayoutPassCallback() {
+				@Override
+				public void visitGlyph(Glyph glyph, float glyphAnimProgress, RectF rect) {
+					int sc;
+
+					if (glyphAnimProgress == 0) {
+						glyph = mFont.mGlyphMap.get(glyph.getCanonicalStartGlyph());
+					}
+					else if (glyphAnimProgress == 1) {
+						glyph = mFont.mGlyphMap.get(glyph.getCanonicalEndGlyph());
+						glyphAnimProgress = 0;
+					}
+
+					if (offscreenGlyphs) {
+						mOffsGlyphBitmap.eraseColor(Color.TRANSPARENT);
+						sc = mOffsGlyphCanvas.save();
+						mOffsGlyphCanvas.translate(
+								mOffsGlyphBitmapUnpaddedSize / 2,
+								mOffsGlyphBitmapUnpaddedSize / 2);
+						mOffsGlyphCanvas.scale(
+								mOffsGlyphBitmapUnpaddedSize * 1f / Font.DRAWHEIGHT,
+								mOffsGlyphBitmapUnpaddedSize * 1f / Font.DRAWHEIGHT);
+						glyph.draw(glyphAnimProgress);
+						mOffsGlyphCanvas.restoreToCount(sc);
+					}
+
+					if (DEBUG_SHOW_RECTS) {
+						c.drawRect(rect, mDebugShowRectPaint);
+					}
+
+					sc = c.save();
+					c.translate(rect.left, rect.top);
+					float scale = mOptions.textSize /
+							(offscreenGlyphs ? mOffsGlyphBitmapUnpaddedSize : Font.DRAWHEIGHT);
+					c.scale(scale, scale);
+					if (offscreenGlyphs) {
+						c.translate(-mOffsGlyphBitmapUnpaddedSize / 2, -mOffsGlyphBitmapUnpaddedSize / 2);
+						c.drawBitmap(mOffsGlyphBitmap, 0, 0, mOffsGlyphPaint);
+					}
+					else {
+						glyph.draw(glyphAnimProgress); // draws into mOffsGlyphCanvas
+					}
+					c.restoreToCount(sc);
 				}
+			}, new RectF());
 
-				if (offscreenGlyphs) {
-					mOffsGlyphBitmap.eraseColor(Color.TRANSPARENT);
-					sc = mOffsGlyphCanvas.save();
-					mOffsGlyphCanvas.translate(
-							mOffsGlyphBitmapUnpaddedSize / 2,
-							mOffsGlyphBitmapUnpaddedSize / 2);
-					mOffsGlyphCanvas.scale(
-							mOffsGlyphBitmapUnpaddedSize * 1f / Font.DRAWHEIGHT,
-							mOffsGlyphBitmapUnpaddedSize * 1f / Font.DRAWHEIGHT);
-					glyph.draw(glyphAnimProgress);
-					mOffsGlyphCanvas.restoreToCount(sc);
-				}
+			c.restoreToCount(sc);
+		}
 
-				if (DEBUG_SHOW_RECTS) {
-					canvas.drawRect(rect, mDebugShowRectPaint);
-				}
-
-				sc = canvas.save();
-				canvas.translate(rect.left, rect.top);
-				float scale = mOptions.textSize /
-						(offscreenGlyphs ? mOffsGlyphBitmapUnpaddedSize : Font.DRAWHEIGHT);
-				canvas.scale(scale, scale);
-				if (offscreenGlyphs) {
-					canvas.translate(-mOffsGlyphBitmapUnpaddedSize / 2, -mOffsGlyphBitmapUnpaddedSize / 2);
-					canvas.drawBitmap(mOffsGlyphBitmap, 0, 0, mOffsGlyphPaint);
-				} else {
-					glyph.draw(glyphAnimProgress); // draws into mOffsGlyphCanvas
-				}
-				canvas.restoreToCount(sc);
-			}
-		}, new RectF());
-
-		canvas.restoreToCount(sc);
+		// Make shadow layer transparent and layer it under the main clock
 		if (showShadow && shadowBitmap != null && mPaints.shadow != null) {
-			canvas.drawBitmap(shadowBitmap, 0, 0, mPaints.shadow);
+			Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+			p.setAlpha(FormClockView.SHADOW_ALPHA);
+			if (PrefUtils.DEBUG) {
+				canvas.drawBitmap(tempBitmap, 0, 0, null);
+				canvas.drawBitmap(shadowBitmap, 0, 0, p);
+			}
+			else {
+				canvas.drawBitmap(shadowBitmap, 0, 0, p);
+				canvas.drawBitmap(tempBitmap, 0, 0, null);
+			}
+
+			shadowBitmap.recycle();
 		}
 
 		mFont.canvas = null;
@@ -353,10 +430,19 @@ public class FormClockRenderer {
 			h = 12;
 		}
 		int m = c.get(Calendar.MINUTE);
-		return (h < 10 ? " " : "")
-				+ h
-				+ ":" + (m < 10 ? "0" : "")
-				+ m;
+
+		if (mOptions.orientation == ORIENTATION_HORIZONTAL) {
+			return (h < 10 ? " " : "")
+					+ h
+					+ ":" + (m < 10 ? "0" : "")
+					+ m;
+		}
+		else { // Zero-pad hour if using vertical orientation
+			return (h < 10 ? "0" : "")
+					+ h
+					+ ":" + (m < 10 ? "0" : "")
+					+ m;
+		}
 	}
 
 	private interface LayoutPassCallback {
@@ -370,6 +456,7 @@ public class FormClockRenderer {
 		public boolean is24hour;
 		public int glyphAnimAverageDelay;
 		public int glyphAnimDuration;
+		public int orientation = ORIENTATION_HORIZONTAL;
 
 		public Options() {
 		}
@@ -381,6 +468,7 @@ public class FormClockRenderer {
 			this.is24hour = copy.is24hour;
 			this.glyphAnimAverageDelay = copy.glyphAnimAverageDelay;
 			this.glyphAnimDuration = copy.glyphAnimDuration;
+			this.orientation = copy.orientation;
 		}
 	}
 
@@ -409,7 +497,6 @@ public class FormClockRenderer {
 		private static final int COLOR_1 = 0;
 		private static final int COLOR_2 = 1;
 		private static final int COLOR_3 = 2;
-		private static final int SHADOW = 3;
 
 		private Map<String, Glyph> mGlyphMap = new HashMap<>();
 
@@ -447,10 +534,8 @@ public class FormClockRenderer {
 		}
 
 		private void drawArcShadow(float l, float t, float r, float b, float startAngle, float sweepAngle, boolean useCenter) {
-			if (shadowBitmap != null && shadowCanvas != null && mPaints.shadow != null) {
-				tempRectF.set(l, t, r, b);
-				shadowCanvas.drawArc(tempRectF, startAngle, sweepAngle, useCenter, mPaints.shadow);
-			}
+			tempRectF.set(l, t, r, b);
+			canvas.drawArc(tempRectF, startAngle, sweepAngle, useCenter, mPaints.shadow);
 		}
 
 		private void drawRoundRect(float l, float t, float r, float b, float rx, float ry, Paint paint) {
@@ -459,10 +544,8 @@ public class FormClockRenderer {
 		}
 
 		private void drawRoundRectShadow(float l, float t, float r, float b, float rx, float ry) {
-			if (shadowBitmap != null && shadowCanvas != null && mPaints.shadow != null) {
-				tempRectF.set(l, t, r, b);
-				canvas.drawRoundRect(tempRectF, rx, ry, mPaints.shadow);
-			}
+			tempRectF.set(l, t, r, b);
+			canvas.drawRoundRect(tempRectF, rx, ry, mPaints.shadow);
 		}
 
 		private void drawOval(float l, float t, float r, float b, Paint paint) {
@@ -471,10 +554,8 @@ public class FormClockRenderer {
 		}
 
 		private void drawOvalShadow(float l, float t, float r, float b) {
-			if (shadowBitmap != null && shadowCanvas != null && mPaints.shadow != null) {
-				tempRectF.set(l, t, r, b);
-				canvas.drawOval(tempRectF, mPaints.shadow);
-			}
+			tempRectF.set(l, t, r, b);
+			canvas.drawOval(tempRectF, mPaints.shadow);
 		}
 
         /*
@@ -482,52 +563,62 @@ public class FormClockRenderer {
          */
 
 		private void drawArc(float l, float t, float r, float b, float startAngle, float sweepAngle, boolean useCenter, int color) {
-			drawArc(l, t, r, b, startAngle, sweepAngle, useCenter, mPaints.fills[color]);
-			if (mPaints.hasStroke) {
-				drawArc(l, t, r, b, startAngle, sweepAngle, useCenter, mPaints.strokes[color]);
+			if (canvas.equals(shadowCanvas)) {
+				drawArcShadow(l, t, r, b, startAngle, sweepAngle, useCenter);
 			}
-			if (mPaints.hasShadow) {
-				drawArc(l, t, r, b, startAngle, sweepAngle, useCenter, mPaints.shadow);
+			else {
+				drawArc(l, t, r, b, startAngle, sweepAngle, useCenter, mPaints.fills[color]);
+				if (mPaints.hasStroke) {
+					drawArc(l, t, r, b, startAngle, sweepAngle, useCenter, mPaints.strokes[color]);
+				}
 			}
 		}
 
 		private void drawRoundRect(float l, float t, float r, float b, float rx, float ry, int color) {
-			drawRoundRect(l, t, r, b, rx, ry, mPaints.fills[color]);
-			if (mPaints.hasStroke) {
-				drawRoundRect(l, t, r, b, rx, ry, mPaints.strokes[color]);
-			}
-			if (mPaints.hasShadow) {
+			if (canvas.equals(shadowCanvas)) {
 				drawRoundRectShadow(l, t, r, b, rx, ry);
+			}
+			else {
+				drawRoundRect(l, t, r, b, rx, ry, mPaints.fills[color]);
+				if (mPaints.hasStroke) {
+					drawRoundRect(l, t, r, b, rx, ry, mPaints.strokes[color]);
+				}
 			}
 		}
 
 		private void drawOval(float l, float t, float r, float b, int color) {
-			drawOval(l, t, r, b, mPaints.fills[color]);
-			if (mPaints.hasStroke) {
-				drawOval(l, t, r, b, mPaints.strokes[color]);
-			}
-			if (mPaints.hasShadow) {
+			if (canvas.equals(shadowCanvas)) {
 				drawOvalShadow(l, t, r, b);
+			}
+			else {
+				drawOval(l, t, r, b, mPaints.fills[color]);
+				if (mPaints.hasStroke) {
+					drawOval(l, t, r, b, mPaints.strokes[color]);
+				}
 			}
 		}
 
 		private void drawRect(float l, float t, float r, float b, int color) {
-			canvas.drawRect(l, t, r, b, mPaints.fills[color]);
-			if (mPaints.hasStroke) {
-				canvas.drawRect(l, t, r, b, mPaints.strokes[color]);
+			if (canvas.equals(shadowCanvas)) {
+				canvas.drawRect(l, t, r, b, mPaints.shadow);
 			}
-			if (mPaints.hasShadow && shadowBitmap != null && shadowCanvas != null && mPaints.shadow != null) {
-				shadowCanvas.drawRect(l, t, r, b, mPaints.shadow);
+			else {
+				canvas.drawRect(l, t, r, b, mPaints.fills[color]);
+				if (mPaints.hasStroke) {
+					canvas.drawRect(l, t, r, b, mPaints.strokes[color]);
+				}
 			}
 		}
 
 		private void drawPath(Path path, int color) {
-			canvas.drawPath(path, mPaints.fills[color]);
-			if (mPaints.hasStroke) {
-				canvas.drawPath(path, mPaints.strokes[color]);
+			if (canvas.equals(shadowCanvas)) {
+				canvas.drawPath(path, mPaints.shadow);
 			}
-			if (mPaints.hasShadow && shadowBitmap != null && shadowCanvas != null && mPaints.shadow != null) {
-				shadowCanvas.drawPath(path, mPaints.shadow);
+			else {
+				canvas.drawPath(path, mPaints.fills[color]);
+				if (mPaints.hasStroke) {
+					canvas.drawPath(path, mPaints.strokes[color]);
+				}
 			}
 		}
 
@@ -680,10 +771,17 @@ public class FormClockRenderer {
 						canvas.save();
 						canvas.translate(interpolate(d, 0, 72), 0);
 						path.reset();
-						path.moveTo(0, 144);
-						path.lineTo(72, 72);
-						path.lineTo(72, 144);
-						path.lineTo(0, 144);
+						if (canvas.equals(shadowCanvas)) {
+							path.moveTo(72, 144);
+							path.lineTo(0, 144);
+							path.lineTo(72, 72);
+						}
+						else {
+							path.moveTo(0, 144);
+							path.lineTo(72, 72);
+							path.lineTo(72, 144);
+							path.lineTo(0, 144);
+						}
 						drawPath(path, COLOR_3);
 						canvas.restore();
 
@@ -873,10 +971,16 @@ public class FormClockRenderer {
 						canvas.save();
 						scaleUniform(1 - d, 0, 144);
 						path.reset();
-						path.moveTo(72, 72);
-						path.lineTo(72, 0);
-						path.lineTo(0, 72);
-						path.lineTo(72, 72);
+						if (canvas.equals(shadowCanvas)) {
+							path.moveTo(72, -1);
+							path.lineTo(-1, 72);
+						}
+						else {
+							path.moveTo(72, 72);
+							path.lineTo(72, 0);
+							path.lineTo(0, 72);
+							path.lineTo(72, 72);
+						}
 						drawPath(path, COLOR_2);
 
 						canvas.restore();
@@ -1014,18 +1118,33 @@ public class FormClockRenderer {
 					canvas.translate(interpolate(d, 0, 36), 0);
 
 					if (d < 1) {
-						drawArc(0, 0, 144, 144,
-								interpolate(d, 180, -64f),
-								-180, true, COLOR_3);
+						if (canvas.equals(shadowCanvas)) {
+							drawArc(0, 0, 144, 144,
+									interpolate(d, 178, -64f),
+									-178, true, COLOR_3);
+						}
+						else {
+							drawArc(0, 0, 144, 144,
+									interpolate(d, 180, -64f),
+									-180, true, COLOR_3);
+						}
 					}
 
 					// parallelogram
 					path.reset();
-					path.moveTo(36, 0);
-					path.lineTo(108, 0);
-					path.lineTo(interpolate(d, 72, 36), interpolate(d, 72, 144));
-					path.lineTo(interpolate(d, 0, -36), interpolate(d, 72, 144));
-					path.close();
+					if (canvas.equals(shadowCanvas)) {
+						path.moveTo(0, 72);
+						path.lineTo(36, 0); // left side
+						path.lineTo(108, 0); // top side
+						path.lineTo(72, 72); // right side
+					}
+					else {
+						path.moveTo(36, 0);
+						path.lineTo(108, 0);
+						path.lineTo(interpolate(d, 72, 36), interpolate(d, 72, 144));
+						path.lineTo(interpolate(d, 0, -36), interpolate(d, 72, 144));
+						path.close();
+					}
 					drawPath(path, COLOR_2);
 
 					canvas.restore();
@@ -1232,10 +1351,14 @@ public class FormClockRenderer {
 
 					// TODO: interpolate colors
 					//ctx.fillStyle = interpolateColors(d, COLOR_1, COLOR_3);
-					drawArc(0, 0, 144, 144,
-							0, interpolate(d, 0, -180), true, COLOR_3);
-
-					drawArc(0, 0, 144, 144, 0, 180, true, COLOR_2);
+					if (canvas.equals(shadowCanvas)) {
+						drawArc(0, 0, 144, 144, 0, 178, true, COLOR_2);
+					}
+					else {
+						drawArc(0, 0, 144, 144,
+								0, interpolate(d, 0, -180), true, COLOR_3);
+						drawArc(0, 0, 144, 144, 0, 180, true, COLOR_2);
+					}
 
 					canvas.restore();
 				}

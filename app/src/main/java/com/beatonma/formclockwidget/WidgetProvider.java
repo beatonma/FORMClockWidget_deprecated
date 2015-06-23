@@ -11,6 +11,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
@@ -18,6 +19,7 @@ import android.widget.RemoteViews;
 
 import com.beatonma.colorpicker.ColorUtils;
 
+import net.nurik.roman.formwatchface.common.FormClockRenderer;
 import net.nurik.roman.formwatchface.common.FormClockView;
 
 import java.util.Calendar;
@@ -34,8 +36,11 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 	final static String EXTERNAL_LWP = "com.beatonma.formclockwidget.EXTERNAL_LWP";
 	final static int INVALID_COLOR = 1234567890;
 
-	private final static int WIDGET_WIDTH = 1000;
-	private final static int WIDGET_HEIGHT = 500;
+	private final static int WIDGET_LONG = 1000;
+	private final static int WIDGET_SHORT = 500;
+
+	private int maxWidth = 1000;
+	private int maxHeight = 500;
 
 	public final static int ANIMATION_START_SECOND = 58;
 	public final static int ANIMATION_STOP_SECOND = 1;
@@ -50,11 +55,13 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 	// User preferences
 	private boolean useWallpaperPalette = false;
 	private boolean enableAnimation = false;
+	private boolean showShadow = false;
 	private boolean showDate = false;
 	private boolean showAlarm = false;
 	private int color1 = Color.WHITE;
 	private int color2 = Color.GRAY;
 	private int color3 = Color.BLACK;
+	private int orientation = FormClockRenderer.ORIENTATION_HORIZONTAL;
 
 	@Override
 	public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -67,6 +74,14 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 		super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
 		loadSharedPreferences(context);
 		scheduleUpdate(context);
+
+		int width = newOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH);
+		int height = newOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT);
+
+		preferences.edit()
+				.putInt(PrefUtils.MAX_WIDGET_WIDTH, width)
+				.putInt(PrefUtils.MAX_WIDGET_HEIGHT, height)
+				.commit();
 	}
 
 	private void updateWidgets(Context context) {
@@ -106,7 +121,9 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 		int ids[] = appWidgetManager.getAppWidgetIds(appWidget);
 
 		FormClockView formClockView = initClockView(context, color1, color2, color3);
-		Bitmap bitmap = formClockView.getDrawingCache();
+		Bitmap bitmap = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888);
+		Canvas canvas = new Canvas(bitmap);
+		formClockView.draw(canvas);
 		updateWidgets(context, appWidgetManager, ids, bitmap);
 	}
 
@@ -118,7 +135,9 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 			appWidgetManager.updateAppWidget(appWidgetId, views);
 		}
 
-		bitmap.recycle();
+		if (bitmap != null) {
+			bitmap.recycle();
+		}
 	}
 
 	@Override
@@ -224,9 +243,11 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 	private void loadSharedPreferences(SharedPreferences preferences) {
 		this.preferences = preferences;
 		useWallpaperPalette = preferences.getBoolean(PrefUtils.PREF_USE_WALLPAPER_PALETTE, false);
+		orientation = Integer.valueOf(preferences.getString(PrefUtils.PREF_THEME_ORIENTATION, "" + FormClockRenderer.ORIENTATION_HORIZONTAL));
 		enableAnimation = preferences.getBoolean(PrefUtils.PREF_ENABLE_ANIMATION, false);
 		showDate = preferences.getBoolean(PrefUtils.PREF_SHOW_DATE, false);
 		showAlarm = preferences.getBoolean(PrefUtils.PREF_SHOW_ALARM, false);
+		showShadow = preferences.getBoolean(PrefUtils.PREF_THEME_SHADOW, false);
 
 		color1 = ColorUtils.getColorFromPreference(preferences, PrefUtils.PREF_COLOR1, Color.WHITE);
 		color2 = ColorUtils.getColorFromPreference(preferences, PrefUtils.PREF_COLOR2, Color.GRAY);
@@ -269,15 +290,34 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 	private FormClockView initClockView(Context context, int color1, int color2, int color3) {
 		loadSharedPreferences(context);
 
+		updateRenderParams();
+
 		FormClockView clockView = new FormClockView(context);
 		clockView.setTextSize(textSize);
 		clockView.setShowDate(showDate);
 		clockView.setShowAlarm(showAlarm);
+		clockView.setShowShadow(showShadow);
+		clockView.setOrientation(orientation);
 		clockView.setColors(color1, color2, color3);
-		clockView.setDrawingCacheEnabled(true);
-		clockView.measure(WIDGET_WIDTH, WIDGET_HEIGHT);
-		clockView.layout(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT);
+
+		clockView.measure(maxWidth, maxHeight);
+		clockView.layout(0, 0, maxWidth, maxHeight);
 		return clockView;
+	}
+
+	// Multipliers here derived through trial and error
+	private void updateRenderParams() {
+		maxWidth = (int) (preferences.getInt(PrefUtils.MAX_WIDGET_WIDTH, WIDGET_LONG) * 1.4);
+		maxHeight = (int) (preferences.getInt(PrefUtils.MAX_WIDGET_HEIGHT, WIDGET_SHORT) * 1.4);
+
+		if (orientation == FormClockRenderer.ORIENTATION_HORIZONTAL) {
+			maxHeight = maxWidth / 2;
+			textSize = (int) (maxWidth / 4.8);
+		}
+		else if (orientation == FormClockRenderer.ORIENTATION_VERTICAL) {
+			maxWidth = (int) (maxHeight * 0.9);
+			textSize = (int) (maxHeight / 2.8);
+		}
 	}
 
 	private void setClockColorsToWallpaper(Context context) {

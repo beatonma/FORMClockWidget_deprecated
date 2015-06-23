@@ -13,11 +13,14 @@ import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.design.widget.Snackbar;
 import android.support.v4.view.ViewPager;
 import android.support.v7.graphics.Palette;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.ImageButton;
@@ -29,6 +32,7 @@ import com.beatonma.colorpicker.ColorUtils;
 import com.beatonma.colorpicker.OnColorPickedListener;
 import com.google.samples.apps.iosched.ui.widget.SlidingTabLayout;
 
+import net.nurik.roman.formwatchface.common.FormClockRenderer;
 import net.nurik.roman.formwatchface.common.FormClockView;
 
 /**
@@ -69,14 +73,19 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 	private int color3 = Color.BLACK;
 	private Palette palette;
 
+	private int orientation = FormClockRenderer.ORIENTATION_HORIZONTAL;
+
 	private boolean wallpaperLoaded = false;
 	private boolean wallpaperColorsLoaded = false;
 	private int wallpaperColor1 = Color.WHITE;
 	private int wallpaperColor2 = Color.GRAY;
 	private int wallpaperColor3 = Color.BLACK;
 
+	private boolean showShadow = false;
 	private boolean showDate = false;
 	private boolean showAlarm = false;
+
+	private int debugTouchCounter = 0;
 
 	@Override
 	public void onCreate(Bundle saved) {
@@ -88,7 +97,7 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 
 		themeId = WallpaperUtils.getThemeFromWallpaper(preferences);
 		setTheme(themeId);
-		setContentView(R.layout.activity_config);
+		setContentView(getLayoutId());
 
 		headerView = findViewById(R.id.header_view);
 
@@ -106,6 +115,7 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 			@Override
 			public void onGlobalLayout() {
 				init();
+				updateViewPagerHeight();
 				headerView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
 			}
 		});
@@ -203,7 +213,25 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 				Utils.setBackground(
 						overlay,
 						getResources().getColor(R.color.Overlay),
-						getResources().getColor(R.color.AccentLight));
+						accentColor);
+//						getResources().getColor(R.color.AccentLight));
+
+				overlay.setOnClickListener(new View.OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						if (debugTouchCounter > 10) {
+							PrefUtils.DEBUG = !PrefUtils.DEBUG;
+							Log.d(TAG, "DEBUG mode " + (PrefUtils.DEBUG ? "enabled" : "disabled"));
+							Snackbar.make(viewPager, "Debug mode " + (PrefUtils.DEBUG ? "enabled" : "disabled"), Snackbar.LENGTH_SHORT).show();
+							updatePreview();
+
+							debugTouchCounter = 0;
+						}
+						else {
+							debugTouchCounter++;
+						}
+					}
+				});
 			}
 		}
 	}
@@ -230,6 +258,17 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 	}
 
 	private void initClockView(FormClockView clock, boolean visible) {
+		switch (getLayoutId()) {
+			case R.layout.activity_config_wide_landscape:
+				clock.setTextSize(clock.getWidth() / 5);
+				break;
+			case R.layout.activity_config_wide_portrait:
+				clock.setTextSize((int) (clock.getHeight() / 3.5));
+				break;
+			default:
+				break;
+		}
+
 		if (useWallpaperPalette) {
 			loadColorsFromWallpaper();
 		}
@@ -238,7 +277,10 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 		if (visible) {
 			clock.setShowDate(showDate);
 			clock.setShowAlarm(showAlarm);
+			clock.setShowShadow(showShadow);
 		}
+
+		clock.setOrientation(orientation);
 	}
 
 	public void updatePreview() {
@@ -262,10 +304,14 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 
 			otherClock.setShowDate(false);
 			otherClock.setShowAlarm(false);
+			otherClock.setShowShadow(false);
+			otherClock.setOrientation(orientation);
 
 			clock.setColors(color1, color2, color3);
 			clock.setShowDate(showDate);
 			clock.setShowAlarm(showAlarm);
+			clock.setShowShadow(showShadow);
+			clock.setOrientation(orientation);
 
 			if (Utils.isLollipop()) {
 				Utils.createCircularReveal(top, new int[]{Utils.CIRCULAR_BOTTOM});
@@ -281,10 +327,14 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 
 			otherClock.setShowDate(false);
 			otherClock.setShowAlarm(false);
+			otherClock.setShowShadow(false);
+			otherClock.setOrientation(orientation);
 
 			clock.setColors(color1, color2, color3);
 			clock.setShowDate(showDate);
 			clock.setShowAlarm(showAlarm);
+			clock.setShowShadow(showShadow);
+			clock.setOrientation(orientation);
 
 			if (Utils.isLollipop()) {
 				Utils.createCircularHide(top, new int[]{Utils.CIRCULAR_BOTTOM});
@@ -382,6 +432,9 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 		useWallpaperPalette = preferences.getBoolean(PrefUtils.PREF_USE_WALLPAPER_PALETTE, false);
 		showDate = preferences.getBoolean(PrefUtils.PREF_SHOW_DATE, false);
 		showAlarm = preferences.getBoolean(PrefUtils.PREF_SHOW_ALARM, false);
+		showShadow = preferences.getBoolean(PrefUtils.PREF_THEME_SHADOW, false);
+		orientation = Integer.valueOf(preferences.getString(
+				PrefUtils.PREF_THEME_ORIENTATION, "" + FormClockRenderer.ORIENTATION_HORIZONTAL));
 
 		color1 = ColorUtils.getColorFromPreference(preferences, PrefUtils.PREF_COLOR1, Color.WHITE);
 		color2 = ColorUtils.getColorFromPreference(preferences, PrefUtils.PREF_COLOR2, Color.GRAY);
@@ -490,6 +543,26 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 		else {
 			hideColors();
 		}
+
+		handler.postDelayed(new Runnable() {
+			@Override
+			public void run() {
+				updateViewPagerHeight();
+			}
+		}, 600);
+	}
+
+	public void updateViewPagerHeight() {
+		DisplayMetrics dm = new DisplayMetrics();
+		getWindowManager().getDefaultDisplay().getMetrics(dm);
+		int displayHeight = dm.heightPixels;
+
+		int vpTop = (int) viewPager.getY();
+		int newHeight = displayHeight - vpTop;
+
+		ViewGroup.LayoutParams lp = viewPager.getLayoutParams();
+		lp.height = newHeight;
+		viewPager.requestLayout();
 	}
 
 	@Override
@@ -498,7 +571,6 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 		loadSharedPreferences();
 		updatePreview();
 		updateLayout();
-//		updateFragments();
 	}
 
 	public void setPalette(Palette palette) {
@@ -637,6 +709,43 @@ public class ConfigActivity extends Activity implements SharedPreferences.OnShar
 		Utils.setBackground(buttonColor3, color3);
 
 		updatePreview();
+	}
+
+	private int getLayoutId() {
+		DisplayMetrics dm = new DisplayMetrics();
+		getWindowManager().getDefaultDisplay().getMetrics(dm);
+
+		int layoutId;
+
+		int w = Utils.pxToDp(this, dm.widthPixels);
+		int h = Utils.pxToDp(this, dm.heightPixels);
+
+		if (w > h) { // Landscape
+			if (w >= 650) {
+				layoutId = R.layout.activity_config_wide_landscape;
+				Log.d(TAG, "Using wide landscape layout");
+			}
+			else {
+				layoutId = R.layout.activity_config_nopreview;
+				Log.d(TAG, "Using nopreview layout");
+			}
+		}
+		else { // Portrait
+			if (w >= 600) {
+				layoutId = R.layout.activity_config_wide_portrait;
+				Log.d(TAG, "Using wide portrait layout");
+			}
+			else if (h >= 400) {
+				layoutId = R.layout.activity_config;
+				Log.d(TAG, "Using standard layout");
+			}
+			else {
+				layoutId = R.layout.activity_config_nopreview;
+				Log.d(TAG, "Using nopreview layout");
+			}
+		}
+
+		return layoutId;
 	}
 
 	private class OnButtonClickedListener implements View.OnClickListener {

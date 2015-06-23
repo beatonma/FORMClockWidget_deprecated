@@ -8,21 +8,21 @@
 
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="@dimen/header_height"
+        android:layout_height="0dp"
         android:id="@+id/header_view"
         android:background="@color/PrimaryDark"
         android:elevation="4dp">
 
         <ProgressBar
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignBottom="@+id/wallpaper"
-        android:id="@+id/image_loading_progress_bar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:indeterminate="true"
-        android:layout_marginBottom="-8dp"
-        android:padding="0dp"
-        android:elevation="8dp"/>
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignBottom="@+id/wallpaper"
+            android:id="@+id/image_loading_progress_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:indeterminate="true"
+            android:layout_marginBottom="-8dp"
+            android:padding="0dp"
+            android:elevation="8dp"/>
 
         <ImageView
             android:layout_width="match_parent"
@@ -80,24 +80,24 @@
         android:clipToPadding="false">
 
         <ImageButton
-            android:layout_width="@dimen/button_color_size"
-            android:layout_height="@dimen/button_color_size"
+            android:layout_width="@dimen/button_color_size_small"
+            android:layout_height="@dimen/button_color_size_small"
             android:layout_margin="8dp"
             android:id="@+id/button_color1"
             android:elevation="4dp"
             android:stateListAnimator="@anim/raise"/>
 
         <ImageButton
-            android:layout_width="@dimen/button_color_size"
-            android:layout_height="@dimen/button_color_size"
+            android:layout_width="@dimen/button_color_size_small"
+            android:layout_height="@dimen/button_color_size_small"
             android:layout_margin="8dp"
             android:id="@+id/button_color2"
             android:elevation="4dp"
             android:stateListAnimator="@anim/raise"/>
 
         <ImageButton
-            android:layout_width="@dimen/button_color_size"
-            android:layout_height="@dimen/button_color_size"
+            android:layout_width="@dimen/button_color_size_small"
+            android:layout_height="@dimen/button_color_size_small"
             android:layout_margin="8dp"
             android:id="@+id/button_color3"
             android:elevation="4dp"
@@ -108,6 +108,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@+id/header_view"
+        android:paddingTop="24dp"
         android:id="@+id/tablayout"
         android:elevation="4dp"/>
 

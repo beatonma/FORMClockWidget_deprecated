@@ -2,6 +2,7 @@ package com.beatonma.formclockwidget;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -16,6 +17,8 @@ import android.view.View;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 
+import net.nurik.roman.formwatchface.common.FormClockRenderer;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,19 +27,21 @@ import java.util.List;
 /**
  * Created by Michael on 28/05/2015.
  */
-public class PrefsFragment extends PreferenceFragment {
+public class PrefsFragment extends PreferenceFragment implements SharedPreferences.OnSharedPreferenceChangeListener {
 	private final static String TAG = "PrefsFragment";
 	private final static int PREFS_THEME = 0;
 	private final static int PREFS_COMPLICATIONS = 1;
 //	private final static int PREFS_NOTIFICATIONS = 2;
 	private final static int PREFS_OTHER = 2;
 
-	ConfigActivity context;
+	private ConfigActivity context;
 	private HashMap<String, String> namePackageMap;
 	private HashMap<String, String> packageLauncherMap;
 
-	String[] installedApps = {""};
-	boolean appsLoaded = false;
+	private SharedPreferences preferences;
+
+	private String[] installedApps = {""};
+	private boolean appsLoaded = false;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -53,6 +58,9 @@ public class PrefsFragment extends PreferenceFragment {
 		PreferenceManager pm = getPreferenceManager();
 		pm.setSharedPreferencesName(PrefUtils.PREFS);
 
+		preferences = pm.getSharedPreferences();
+		preferences.registerOnSharedPreferenceChangeListener(this);
+
 		switch (tab) {
 			case PREFS_THEME:
 				initTheme(pm);
@@ -67,6 +75,17 @@ public class PrefsFragment extends PreferenceFragment {
 				initTheme(pm);
 				break;
 		}
+	}
+
+	@Override
+	public void onSharedPreferenceChanged(SharedPreferences sp, String key) {
+		syncSummaries();
+	}
+
+	@Override
+	public void onPause() {
+		super.onPause();
+		preferences.unregisterOnSharedPreferenceChangeListener(this);
 	}
 
 	private void saveTouchActivity(String key) {
@@ -93,6 +112,23 @@ public class PrefsFragment extends PreferenceFragment {
 
 	public void initTheme(PreferenceManager pm) {
 		addPreferencesFromResource(R.xml.prefs_theme);
+
+		Preference orientationPreference = pm.findPreference(PrefUtils.PREF_THEME_ORIENTATION);
+		if (orientationPreference != null) {
+			int orientation = Integer.valueOf(pm.getSharedPreferences().getString(PrefUtils.PREF_THEME_ORIENTATION, "" + FormClockRenderer.ORIENTATION_HORIZONTAL));
+			orientationPreference.setSummary(orientation == FormClockRenderer.ORIENTATION_HORIZONTAL ? "Horizontal" : "Vertical");
+		}
+	}
+
+	public void syncSummaries() {
+		PreferenceManager pm = getPreferenceManager();
+		pm.setSharedPreferencesName(PrefUtils.PREFS);
+
+		Preference orientationPreference = pm.findPreference(PrefUtils.PREF_THEME_ORIENTATION);
+		if (orientationPreference != null) {
+			int orientation = Integer.valueOf(pm.getSharedPreferences().getString(PrefUtils.PREF_THEME_ORIENTATION, "" + FormClockRenderer.ORIENTATION_HORIZONTAL));
+			orientationPreference.setSummary(orientation == FormClockRenderer.ORIENTATION_HORIZONTAL ? "Horizontal" : "Vertical");
+		}
 	}
 
 	public void initComplications(PreferenceManager pm) {
@@ -230,9 +266,14 @@ public class PrefsFragment extends PreferenceFragment {
 					String packageName = info.activityInfo.packageName;
 					String launcherName = info.activityInfo.name;
 
-					namePackageMap.put(niceName, packageName);
-					packageLauncherMap.put(packageName, launcherName);
-					nameList.add(niceName);
+					if (!niceName.equals("")) {
+						if (nameList.contains(niceName)) {
+							niceName = niceName + " (" + packageName + ")";
+						}
+						namePackageMap.put(niceName, packageName);
+						packageLauncherMap.put(packageName, launcherName);
+						nameList.add(niceName);
+					}
 				}
 
 				nameList.removeAll(Collections.singleton(null));

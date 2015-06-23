@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:clock="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/Primary">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
+
+        <RelativeLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:id="@+id/header_view">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/wallpaper"
+                android:cropToPadding="false"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/preview_description"/>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/Overlay"
+                android:id="@+id/header_overlay"
+                android:elevation="6dp"
+                android:clickable="true"/>
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/preview1"
+                android:elevation="2dp">
+                <net.nurik.roman.formwatchface.common.FormClockView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:id="@+id/clock_view_1"
+                    clock:textSize="@dimen/preview_text_size"
+                    clock:isPreview="true"/>
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/preview2"
+                android:elevation="4dp"
+                android:visibility="invisible">
+                <net.nurik.roman.formwatchface.common.FormClockView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:id="@+id/clock_view_2"
+                    clock:textSize="@dimen/preview_text_size"
+                    clock:isPreview="true"/>
+            </RelativeLayout>
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:elevation="8dp"
+            android:background="@color/White">
+
+            <ProgressBar
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:layout_marginTop="-8dp"
+                android:id="@+id/image_loading_progress_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:indeterminate="true"
+                android:padding="0dp"
+                android:elevation="8dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignBottom="@+id/tablayout"
+                android:layout_centerHorizontal="true"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:id="@+id/colors_container"
+                android:elevation="1dp"
+                android:clipToPadding="false">
+
+                <ImageButton
+                    android:layout_width="@dimen/button_color_size"
+                    android:layout_height="@dimen/button_color_size"
+                    android:layout_margin="8dp"
+                    android:id="@+id/button_color1"
+                    android:elevation="4dp"
+                    android:stateListAnimator="@anim/raise"/>
+
+                <ImageButton
+                    android:layout_width="@dimen/button_color_size"
+                    android:layout_height="@dimen/button_color_size"
+                    android:layout_margin="8dp"
+                    android:id="@+id/button_color2"
+                    android:elevation="4dp"
+                    android:stateListAnimator="@anim/raise"/>
+
+                <ImageButton
+                    android:layout_width="@dimen/button_color_size"
+                    android:layout_height="@dimen/button_color_size"
+                    android:layout_margin="8dp"
+                    android:id="@+id/button_color3"
+                    android:elevation="4dp"
+                    android:stateListAnimator="@anim/raise"/>
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/expanded_tab_height"
+                android:id="@+id/tablayout_padding"
+                android:elevation="4dp"
+                android:clickable="true"/>
+
+            <com.google.samples.apps.iosched.ui.widget.SlidingTabLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/tablayout_padding"
+                android:id="@+id/tablayout"
+                android:elevation="4dp"/>
+
+            <android.support.v4.view.ViewPager
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_below="@+id/tablayout"
+                android:id="@+id/viewpager" />
+        </RelativeLayout>
+    </LinearLayout>
+</RelativeLayout>

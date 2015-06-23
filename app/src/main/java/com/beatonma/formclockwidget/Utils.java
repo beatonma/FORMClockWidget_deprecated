@@ -121,6 +121,22 @@ public class Utils {
 		return px;
 	}
 
+	public static int pxToDp(Context context, int px) {
+		DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
+		int dp = Math.round(px / (displayMetrics.xdpi / DisplayMetrics.DENSITY_DEFAULT));
+		return dp;
+	}
+
+	public static int getScreenWidth(Context context) {
+		DisplayMetrics dm = context.getResources().getDisplayMetrics();
+		return dm.widthPixels;
+	}
+
+	public static int getScreenHeight(Context context) {
+		DisplayMetrics dm = context.getResources().getDisplayMetrics();
+		return dm.heightPixels;
+	}
+
 	// generate ripple drawable and set as view background
 	public static void setBackground(View v, int color, int highlight) {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {

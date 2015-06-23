@@ -1,8 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+                  xmlns:list="http://schemas.android.com/apk/res-auto">
     <CheckBoxPreference
         android:defaultValue="false"
         android:title="@string/pref_use_wallpaper_palette"
         android:summary="@string/pref_use_wallpaper_palette_summary"
         android:key="pref_use_wallpaper_palette"/>
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:title="@string/pref_theme_show_shadows"
+        android:summary="@string/pref_theme_show_shadows_summary"
+        android:key="pref_theme_show_shadows"/>
+
+    <com.beatonma.formclockwidget.ListPreference
+        android:title="@string/pref_theme_orientation"
+        android:summary="@string/pref_theme_orientation_summary"
+        android:key="pref_theme_orientation"
+        list:entries="@array/orientation_entries"
+        list:entryValues="@array/orientation_entryValues"
+        list:defaultValue="0"/>
 </PreferenceScreen>

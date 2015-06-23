@@ -7,9 +7,12 @@
     <dimen name="seconds_clock_height">16sp</dimen>
     <dimen name="seconds_clock_spacing">3dp</dimen>
 
-    <dimen name="button_color_background_size">74dp</dimen>
-    <dimen name="button_color_size">72dp</dimen>
-    <dimen name="color_patch_size">36dp</dimen>
+    <dimen name="button_color_background_size">98dp</dimen>
+    <dimen name="button_color_size">96dp</dimen>
+    <dimen name="color_patch_size">48dp</dimen>
+
+    <dimen name="button_color_background_size_small">50dp</dimen>
+    <dimen name="button_color_size_small">48dp</dimen>
 
     <dimen name="expanded_tab_height">64dp</dimen>
 </resources>

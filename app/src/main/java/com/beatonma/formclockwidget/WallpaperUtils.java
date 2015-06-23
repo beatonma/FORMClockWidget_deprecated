@@ -238,7 +238,7 @@ public class WallpaperUtils {
 		}
 
 		Bitmap output = Bitmap.createScaledBitmap(bitmap, dstWidth, dstHeight, false);
-		if (output != bitmap) {
+		if (output != bitmap && bitmap != null) {
 			bitmap.recycle();
 		}
 
@@ -277,8 +277,14 @@ public class WallpaperUtils {
 				BitmapFactory.Options options = new BitmapFactory.Options();
 				output = decoder.decodeRegion(rect, options);
 			}
+			catch (OutOfMemoryError e) {
+				Log.e(TAG, "Out of memory - image too large: " + e.toString());
+				e.printStackTrace();
+				output = null;
+			}
 			catch (Exception e) {
 				Log.e(TAG, "Error getting bitmap region decoder: " + e.toString());
+				output = null;
 			}
 		}
 		else {
