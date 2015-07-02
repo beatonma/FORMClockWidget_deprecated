@@ -42,9 +42,11 @@
     <string name="pref_enable_animation_summary">Warning: widgets are really not meant to animate. Enabling animation may cause performance issues, including increased battery consumption!</string>
     <string name="pref_on_touch">Touch shortcut</string>
     <string name="pref_on_touch_summary">Choose an app to open when the widget is touched.</string>
+    <string name="on_touch_nothing">Nothing</string>
 
 
     <!-- Error messages -->
     <string name="error_applist">Error getting apps list.</string>
     <string name="error_retry">Retry</string>
+    <string name="null_string">[null]</string>
 </resources>

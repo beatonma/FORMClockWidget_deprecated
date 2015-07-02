@@ -92,6 +92,13 @@ public class PrefsFragment extends PreferenceFragment implements SharedPreferenc
 		String packageName = namePackageMap.get(key);
 		String launcherName = packageLauncherMap.get(packageName);
 
+		String noAction = getString(R.string.on_touch_nothing);
+		if (key.equals(noAction)) {
+			String nullString = getString(R.string.null_string);
+			packageName = nullString;
+			launcherName = nullString;
+		}
+
 		getPreferenceManager().getSharedPreferences().edit()
 				.putString(PrefUtils.PREF_ON_TOUCH_PACKAGE, packageName)
 				.putString(PrefUtils.PREF_ON_TOUCH_LAUNCHER, launcherName)
@@ -278,9 +285,10 @@ public class PrefsFragment extends PreferenceFragment implements SharedPreferenc
 
 				nameList.removeAll(Collections.singleton(null));
 				Collections.sort(nameList);
-				installedApps = new String[nameList.size()];
+				installedApps = new String[nameList.size() + 1];
+				installedApps[0] = getString(R.string.on_touch_nothing);
 
-				int i = 0;
+				int i = 1;
 				for (String s : nameList) {
 					installedApps[i++] = s;
 				}
@@ -338,9 +346,10 @@ public class PrefsFragment extends PreferenceFragment implements SharedPreferenc
 
 				nameList.removeAll(Collections.singleton(null));
 				Collections.sort(nameList);
-				installedApps = new String[nameList.size()];
+				installedApps = new String[nameList.size() + 1];
+				installedApps[0] = getString(R.string.on_touch_nothing);
 
-				int i = 0;
+				int i = 1;
 				for (String s : nameList) {
 					Log.d(TAG, "app #" + i + " = " + s);
 					installedApps[i++] = s;

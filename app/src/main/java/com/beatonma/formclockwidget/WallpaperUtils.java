@@ -6,6 +6,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapRegionDecoder;
@@ -17,6 +18,11 @@ import android.util.Log;
 
 import com.google.android.apps.muzei.api.MuzeiContract;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +35,7 @@ public class WallpaperUtils {
 
 	private final static String LWP_MUZEI = "net.nurik.roman.muzei";
 	private final static String LWP_REGISTER = "registered_lwp";
+	private final static String MUZEI_SOURCE_ZYDEN = "cloud-walls.com/wallpapers/zyden/Zyden/";
 
 	public static boolean isMuzei(Context context) {
 		WallpaperManager wallpaperManager = WallpaperManager.getInstance(context);
@@ -245,6 +252,15 @@ public class WallpaperUtils {
 		return output;
 	}
 
+	public static Bitmap getScaledBitmap(Bitmap bitmap, int newWidth, int newHeight) {
+		Bitmap output = Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, false);
+		if (output != bitmap) {
+			bitmap.recycle();
+		}
+
+		return output;
+	}
+
 	public static Bitmap getMuzeiImage(Context context) {
 		InputStream is = null;
 		Bitmap output = null;
@@ -257,6 +273,44 @@ public class WallpaperUtils {
 			Log.e(TAG, "Error opening input stream from Muzei: " + e.toString());
 			e.printStackTrace();
 		}
+
+		// Start Zyden workaround
+		// Workaround to handle Zyden wallpapers. Something about the formatting of certain files
+		// causes them to be converted to greyscale. Caching the file locally and opening an
+		// inputstream from that file seems to work. I'm not sure why!
+		Cursor cursor = resolver.query(MuzeiContract.Artwork.CONTENT_URI, new String[] {"title", "token"}, null, null, null);
+		cursor.moveToFirst();
+		String title = cursor.getString(0);
+		String token = cursor.getString(1);
+		cursor.close();
+
+		if (token != null && token.contains(MUZEI_SOURCE_ZYDEN)) {
+			Log.d(TAG, "Attempting to use Zyden workaround");
+			File cacheFile = new File(context.getFilesDir(), title);
+			if (!cacheFile.exists()) {
+				if (is != null) {
+					try { // Cache to local file
+						Bitmap bitmap = BitmapFactory.decodeStream(is);
+						writeBitmapToFile(context, title, bitmap);
+						bitmap.recycle();
+					}
+					catch (OutOfMemoryError e) {
+						Log.e(TAG, "Out of memory trying to cache Zyden bitmap: " + e.toString());
+					}
+					catch (Exception e) {
+						Log.e(TAG, "Error trying to cache Zyden wallpaper: " + e.toString());
+					}
+				}
+			}
+
+			try {
+				is = new FileInputStream(cacheFile);
+			}
+			catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
+		}
+		// End Zyden workaround
 
 		if (is != null) {
 			try {
@@ -288,6 +342,7 @@ public class WallpaperUtils {
 			}
 		}
 		else {
+			Log.e(TAG, "Muzei input stream is null.");
 			return null;
 		}
 		return output;
@@ -298,5 +353,28 @@ public class WallpaperUtils {
 				R.style.Grey, R.style.Red, R.style.DeepOrange, R.style.Amber,
 				R.style.Green, R.style.Blue, R.style.DeepPurple, R.style.Pink};
 		return themes[WallpaperUtils.whatColor(preferences.getInt(PrefUtils.WALLPAPER_COLOR1, Color.GRAY))];
+	}
+
+	public static File writeBitmapToFile(Context context, String filename, Bitmap bitmap) {
+		FileOutputStream out = null;
+		Log.d(TAG, "writing to file");
+		filename = context.getFilesDir() + File.separator + filename;
+		try {
+			out = new FileOutputStream(filename);
+			bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		finally {
+			try {
+				if (out != null) {
+					out.close();
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return new File(filename);
 	}
 }

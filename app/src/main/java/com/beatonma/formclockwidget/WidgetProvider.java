@@ -124,7 +124,13 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 		Bitmap bitmap = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888);
 		Canvas canvas = new Canvas(bitmap);
 		formClockView.draw(canvas);
-		updateWidgets(context, appWidgetManager, ids, bitmap);
+		try {
+			updateWidgets(context, appWidgetManager, ids, bitmap);
+		}
+		catch (IllegalArgumentException e) {
+			Log.e(TAG, "IllegalArgumentException: " + e.toString());
+			updateWidgets(context, appWidgetManager, ids, rescaleBitmap(context, bitmap));
+		}
 	}
 
 	private void updateWidgets(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds, Bitmap bitmap) {
@@ -138,6 +144,33 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 		if (bitmap != null) {
 			bitmap.recycle();
 		}
+	}
+
+	/*
+	 * The documentation says bitmaps for remote views can be no larger than that required
+	 * to render 1.5x screen size. Some devices seem to lower that requirement to 1.0x so
+	 * we catch the exception and resize on the fly to ensure it fits within one screen.
+	 */
+	private Bitmap rescaleBitmap(Context context, Bitmap bitmap) {
+		Log.d(TAG, "Rescaling bitmap");
+		int newWidth;
+		int newHeight;
+		if (orientation == FormClockRenderer.ORIENTATION_HORIZONTAL) {
+			newWidth = Utils.getScreenWidth(context);
+			newHeight = (int) (newWidth / getHorizontalHeightScaleFactor());
+		}
+		else { // ORIENTATION_VERTICAL
+			newHeight = Utils.getScreenWidth(context);
+			newWidth = (int) (newHeight * 0.9);
+		}
+
+		Bitmap output = WallpaperUtils.getScaledBitmap(bitmap, newWidth, newHeight);
+
+		if (output != bitmap) {
+			bitmap.recycle();
+		}
+
+		return output;
 	}
 
 	@Override
@@ -305,18 +338,27 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 		return clockView;
 	}
 
-	// Multipliers here derived through trial and error
 	private void updateRenderParams() {
 		maxWidth = (int) (preferences.getInt(PrefUtils.MAX_WIDGET_WIDTH, WIDGET_LONG) * 1.4);
 		maxHeight = (int) (preferences.getInt(PrefUtils.MAX_WIDGET_HEIGHT, WIDGET_SHORT) * 1.4);
 
+		// Multipliers here derived through trial and error
 		if (orientation == FormClockRenderer.ORIENTATION_HORIZONTAL) {
-			maxHeight = maxWidth / 2;
+			maxHeight = (int) (maxWidth / getHorizontalHeightScaleFactor());
 			textSize = (int) (maxWidth / 4.8);
 		}
 		else if (orientation == FormClockRenderer.ORIENTATION_VERTICAL) {
 			maxWidth = (int) (maxHeight * 0.9);
 			textSize = (int) (maxHeight / 2.8);
+		}
+	}
+
+	private double getHorizontalHeightScaleFactor() {
+		if (showAlarm || showDate) {
+			return 3.58;
+		}
+		else {
+			return 4.5;
 		}
 	}
 
@@ -356,6 +398,11 @@ public class WidgetProvider extends AppWidgetProvider implements SharedPreferenc
 		Intent intent;
 
 		if (pkg == null) {
+			return null;
+		}
+
+		String nullString = context.getString(R.string.null_string);
+		if (pkg.equals(nullString) || (activity != null && activity.equals(nullString))) {
 			return null;
 		}
 
